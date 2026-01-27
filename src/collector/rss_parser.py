@@ -44,6 +44,7 @@ def collect_rss():
             article = RawArticle(
                 title=entry.get('title', '제목 없음'),
                 content=entry.get('summary', entry.get('description', '')),
+                origin_url=entry.link,
                 source=src['source'],
                 category_id=cat_id,
                 published_at=pub_date
