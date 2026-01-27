@@ -45,9 +45,6 @@
   category: "기타"
 
 - source: "연합뉴스TV"
-  url: "http://www.yonhapnewstv.co.kr/browse/feed/"
-  category: "전체"
-- source: "연합뉴스TV"
   url: "http://www.yonhapnewstv.co.kr/category/news/politics/feed/"
   category: "정치"
 - source: "연합뉴스TV"
@@ -123,9 +120,6 @@
   category: "연예"
 
 - source: "천지일보"
-  url: "https://cdn.newscj.com/rss/gns_allArticle.xml"
-  category: "전체"
-- source: "천지일보"
   url: "https://cdn.newscj.com/rss/gns_S1N1.xml"
   category: "정치"
 - source: "천지일보"
@@ -157,9 +151,6 @@
   url: "https://www.anewsa.com/asianews_rss.php"
   category: "전체"
 
-- source: "국제신문"
-  url: "http://www.kookje.co.kr/news2011/rss/newslist.xml"
-  category: "전체"
 - source: "국제신문"
   url: "http://www.kookje.co.kr/news2011/rss/newslist01.xml"
   category: "정치"
