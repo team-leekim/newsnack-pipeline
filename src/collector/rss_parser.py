@@ -1,8 +1,8 @@
 import feedparser
 import yaml
 import logging
-from datetime import datetime
-from time import mktime
+import calendar
+from datetime import timezone, datetime
 from src.database.connection import SessionLocal
 from src.database.models import RawArticle, Category
 
@@ -36,10 +36,10 @@ def collect_rss():
         for entry in feed.entries:
             total_count += 1
             # 날짜 파싱 (없으면 현재 시간)
-            if 'published_parsed' in entry:
-                pub_date = datetime.fromtimestamp(mktime(entry.published_parsed))
+            if 'published_parsed' in entry and entry.published_parsed:
+                pub_date = datetime.fromtimestamp(calendar.timegm(entry.published_parsed), tz=timezone.utc)
             else:
-                pub_date = datetime.now()
+                pub_date = datetime.now(timezone.utc)
 
             article = RawArticle(
                 title=entry.get('title', '제목 없음'),
