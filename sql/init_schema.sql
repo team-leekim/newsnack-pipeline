@@ -38,13 +38,13 @@ CREATE TABLE IF NOT EXISTS issue (
 -- [3] AI 콘텐츠 관련
 CREATE TABLE IF NOT EXISTS ai_content (
                                           id BIGSERIAL PRIMARY KEY,
-                                          content_type VARCHAR(20) NOT NULL, -- 'WEBTOON', 'CARD_NEWS', 'TODAY_NEWSNACK'
+                                          content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('WEBTOON', 'CARD_NEWS', 'TODAY_NEWSNACK')),
                                           published_at TIMESTAMPTZ DEFAULT NOW(),
                                           thumbnail_url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS ai_article (
-                                          ai_content_id BIGINT PRIMARY KEY REFERENCES ai_content(id),
+                                          ai_content_id BIGINT PRIMARY KEY REFERENCES ai_content(id) ON DELETE CASCADE,
                                           title VARCHAR(255) NOT NULL,
                                           editor_id INT REFERENCES editor(id),
                                           category_id INT REFERENCES category(id),
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS ai_article (
 );
 
 CREATE TABLE IF NOT EXISTS today_newsnack (
-                                              ai_content_id BIGINT PRIMARY KEY REFERENCES ai_content(id),
+                                              ai_content_id BIGINT PRIMARY KEY REFERENCES ai_content(id) ON DELETE CASCADE,
                                               audio_data JSONB -- {"audioUrl": "...", "script": [...]}
 );
 
@@ -68,6 +68,9 @@ CREATE TABLE IF NOT EXISTS reaction_count (
                                               angry_count INT DEFAULT 0,
                                               empathy_count INT DEFAULT 0
 );
+
+CREATE INDEX idx_raw_article_category_id ON raw_article(category_id);
+CREATE INDEX idx_ai_content_published_at ON ai_content(published_at);
 
 -- [5] 카테고리 초기 데이터 삽입
 INSERT INTO category (name) VALUES
