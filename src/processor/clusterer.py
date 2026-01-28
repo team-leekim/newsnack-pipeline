@@ -16,7 +16,7 @@ def fetch_target_articles(db):
     time_limit = datetime.now(timezone.utc) - timedelta(hours=24)
     logger.info(f"Fetching articles...")
     return db.query(RawArticle).filter(
-        RawArticle.issue_id == None,
+        RawArticle.issue_id.is_(None),
         RawArticle.published_at >= time_limit
     ).all()
 
