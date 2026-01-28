@@ -14,6 +14,7 @@ SIMILARITY_THRESHOLD = 0.5
 def fetch_target_articles(db):
     """최근 24시간 내, 아직 이슈가 없는 기사 조회"""
     time_limit = datetime.now(timezone.utc) - timedelta(hours=24)
+    logger.info(f"Fetching articles...")
     return db.query(RawArticle).filter(
         RawArticle.issue_id == None,
         RawArticle.published_at >= time_limit
@@ -57,10 +58,11 @@ def create_issue_from_cluster(db, category_id, cluster_articles):
 
 
 def run_clustering():
+    logger.info("=== Start Clustering Job ===")
     with session_scope() as db:
         articles = fetch_target_articles(db)
         if not articles:
-            logger.info("No articles to cluster.")
+            logger.info("No articles to cluster. Job finished.")
             return
 
         logger.info(f"Processing {len(articles)} articles...")
@@ -94,6 +96,8 @@ def run_clustering():
                     
                     for idx in similar_indices:
                         visited[idx] = True
+    logger.info(f"=== Job Finished ===")
+
 
 if __name__ == "__main__":
     run_clustering()
