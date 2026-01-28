@@ -20,3 +20,11 @@ class RawArticle(Base):
     published_at = Column(DateTime(timezone=True), nullable=False)
     crawled_at = Column(DateTime(timezone=True), server_default=func.now())
     issue_id = Column(BigInteger, ForeignKey("issue.id"), nullable=True)
+
+class Issue(Base):
+    __tablename__ = "issue"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    issue_title = Column(String(255), nullable=True)
+    category_id = Column(Integer, ForeignKey("category.id"))
+    batch_time = Column(DateTime(timezone=True), nullable=False)
+    is_processed = Column(Boolean, default=False)
