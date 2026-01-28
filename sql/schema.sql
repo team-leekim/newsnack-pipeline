@@ -71,8 +71,3 @@ CREATE TABLE IF NOT EXISTS reaction_count (
 
 CREATE INDEX idx_raw_article_category_id ON raw_article(category_id);
 CREATE INDEX idx_ai_content_published_at ON ai_content(published_at);
-
--- [5] 카테고리 초기 데이터 삽입
-INSERT INTO category (name) VALUES
-('정치'), ('경제'), ('사회'), ('국제'), ('문화'), ('IT'), ('스포츠'), ('연예'), ('라이프'), ('기타')
-ON CONFLICT (name) DO NOTHING;
