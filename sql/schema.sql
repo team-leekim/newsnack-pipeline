@@ -10,7 +10,18 @@ CREATE TABLE IF NOT EXISTS editor (
                                       profile_image_url TEXT,
                                       description TEXT,
                                       keywords JSONB, -- ["#친절한", "#테크"]
-                                      persona_code VARCHAR(20)
+                                      persona_prompt TEXT
+);
+
+CREATE TABLE IF NOT EXISTS editor_category (
+    id BIGSERIAL PRIMARY KEY,
+    editor_id INT NOT NULL,
+    category_id INT NOT NULL,
+    
+    FOREIGN KEY (editor_id) REFERENCES editor(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES category(id) ON DELETE CASCADE,
+
+    CONSTRAINT uk_editor_category UNIQUE (editor_id, category_id)
 );
 
 -- 수집 파이프라인 관련
