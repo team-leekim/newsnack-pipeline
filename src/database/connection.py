@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.environ["DATABASE_URL"]
 
 # 1. 엔진 생성
 engine = create_engine(DATABASE_URL, echo=False)
