@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -13,7 +13,7 @@ SIMILARITY_THRESHOLD = 0.5
 
 def fetch_target_articles(db):
     """최근 24시간 내, 아직 이슈가 없는 기사 조회"""
-    time_limit = datetime.now() - timedelta(hours=24)
+    time_limit = datetime.now(timezone.utc) - timedelta(hours=24)
     return db.query(RawArticle).filter(
         RawArticle.issue_id == None,
         RawArticle.published_at >= time_limit
@@ -43,7 +43,7 @@ def create_issue_from_cluster(db, category_id, cluster_articles):
     new_issue = Issue(
         issue_title=representative_title, 
         category_id=category_id,
-        batch_time=datetime.now(), 
+        batch_time=datetime.now(timezone.utc),
         is_processed=False
     )
     db.add(new_issue)
