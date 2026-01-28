@@ -3,8 +3,10 @@ import yaml
 import logging
 import calendar
 from datetime import timezone, datetime
-from src.database.connection import SessionLocal, session_scope
+from sqlalchemy.dialects.postgresql import insert
+
 from src.database.models import RawArticle, Category
+from src.database.connection import session_scope
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,9 +23,9 @@ def collect_rss():
         with open("src/collector/sources.yaml", "r", encoding='utf-8') as f:
             sources = yaml.safe_load(f)
         
-        total_count = 0
-        new_count = 0
-        
+        total_processed = 0
+        total_new_inserted = 0
+
         for src in sources:
             logger.info(f"Collecting from {src['source']} - {src['category']}...")
             feed = feedparser.parse(src['url'])
@@ -33,32 +35,37 @@ def collect_rss():
                 logger.warning(f"Category '{src['category']}' not found in DB. Skipping...")
                 continue
 
+            article_data_list = []
+
             for entry in feed.entries:
-                total_count += 1
+                total_processed += 1
                 # 날짜 파싱 (없으면 현재 시간)
                 if 'published_parsed' in entry and entry.published_parsed:
                     pub_date = datetime.fromtimestamp(calendar.timegm(entry.published_parsed), tz=timezone.utc)
                 else:
                     pub_date = datetime.now(timezone.utc)
 
-                article = RawArticle(
-                    title=entry.get('title', '제목 없음'),
-                    content=entry.get('summary', entry.get('description', '')),
-                    origin_url=entry.link,
-                    source=src['source'],
-                    category_id=cat_id,
-                    published_at=pub_date
-                )
+                article_data_list.append({
+                    "title": entry.get('title', '제목 없음'),
+                    "content": entry.get('summary', entry.get('description', '')),
+                    "origin_url": entry.link,
+                    "source": src['source'],
+                    "category_id": cat_id,
+                    "published_at": pub_date
+                })
 
-                try:
-                    db.add(article)
-                    db.commit() # 하나씩 커밋해서 중복 발생 시 해당 건만 스킵
-                    new_count += 1
-                except Exception:
-                    db.rollback()
-                    continue
-                    
-        logger.info(f"Finished! Total processed: {total_count}, Newly added: {new_count}")
+            if article_data_list:
+                stmt = insert(RawArticle).values(article_data_list)
+                stmt = stmt.on_conflict_do_nothing(index_elements=['origin_url'])
+                result = db.execute(stmt)
+
+                inserted_in_this_batch = result.rowcount
+                skipped_in_this_batch = len(article_data_list) - inserted_in_this_batch
+                total_new_inserted += inserted_in_this_batch
+
+                logger.info(f"Source: {src['source']} | New: {inserted_in_this_batch} | Skip: {skipped_in_this_batch} | Total: {len(article_data_list)}")
+
+    logger.info(f"All finished! Total: {total_processed}, New: {total_new_inserted}")
 
 if __name__ == "__main__":
     collect_rss()
