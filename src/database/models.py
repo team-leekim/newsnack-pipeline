@@ -19,4 +19,4 @@ class RawArticle(Base):
     category_id = Column(Integer, ForeignKey("category.id"))
     published_at = Column(DateTime(timezone=True), nullable=False)
     crawled_at = Column(DateTime(timezone=True), server_default=func.now())
-    group_id = Column(BigInteger, nullable=True)
+    issue_id = Column(BigInteger, ForeignKey("issue.id"), nullable=True)
