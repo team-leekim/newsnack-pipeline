@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -23,12 +24,9 @@ def fetch_target_articles(db):
 
 def group_articles_by_category(articles):
     """카테고리별 그룹핑"""
-    grouped = {}
+    grouped = defaultdict(list)
     for article in articles:
-        cat_id = article.category_id
-        if cat_id not in grouped:
-            grouped[cat_id] = []
-        grouped[cat_id].append(article)
+        grouped[article.category_id].append(article)
     return grouped
 
 
