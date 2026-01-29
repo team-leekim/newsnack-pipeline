@@ -74,7 +74,7 @@ def collect_rss():
                 logger.error(f"Error processing source {src['source']}: {e}")
                 continue
             finally:
-                time.sleep(0.5)
+                time.sleep(0.2)
 
     logger.info(f"All finished! Total: {total_processed}, New: {total_new_inserted}")
 
