@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS issue (
     batch_time TIMESTAMPTZ NOT NULL,
     is_processed BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX idx_issue_batch_time ON issue(batch_time);
+CREATE INDEX IF NOT EXISTS idx_issue_batch_time ON issue(batch_time);
 
 -- 수집 기사 테이블 (Many)
 CREATE TABLE IF NOT EXISTS raw_article (
@@ -46,40 +46,43 @@ CREATE TABLE IF NOT EXISTS raw_article (
     published_at TIMESTAMPTZ NOT NULL,
     crawled_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX idx_raw_article_published_at ON raw_article(published_at);
-CREATE INDEX idx_raw_article_cluster_target ON raw_article(issue_id, published_at);
+CREATE INDEX IF NOT EXISTS idx_raw_article_published_at ON raw_article(published_at);
+CREATE INDEX IF NOT EXISTS idx_raw_article_cluster_target ON raw_article(issue_id, published_at);
 
 -- AI 콘텐츠 관련
-CREATE TABLE IF NOT EXISTS ai_content (
-                                          id BIGSERIAL PRIMARY KEY,
-                                          content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('WEBTOON', 'CARD_NEWS', 'TODAY_NEWSNACK')),
-                                          published_at TIMESTAMPTZ DEFAULT NOW(),
-                                          thumbnail_url TEXT
-);
-CREATE INDEX idx_ai_content_published_at ON ai_content(published_at);
-
+-- [AI 기사: 웹툰/카드뉴스]
 CREATE TABLE IF NOT EXISTS ai_article (
-                                          ai_content_id BIGINT PRIMARY KEY REFERENCES ai_content(id) ON DELETE CASCADE,
-                                          title VARCHAR(255) NOT NULL,
-                                          editor_id INT REFERENCES editor(id),
-                                          category_id INT REFERENCES category(id),
-                                          summary JSONB, -- ["요약1", "요약2", "요약3"]
-                                          body TEXT,
-                                          image_data JSONB, -- {"imageUrls": ["url1", "url2"]}
-                                          origin_articles JSONB -- 원본 링크 리스트
+    id BIGSERIAL PRIMARY KEY,
+    issue_id BIGINT, -- 상위 이슈 ID (FK 제약 없음, DW 전환 대비)
+    content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('WEBTOON', 'CARD_NEWS')),
+    title VARCHAR(255) NOT NULL,
+    thumbnail_url TEXT,
+    editor_id INT REFERENCES editor(id),
+    category_id INT REFERENCES category(id),
+    summary JSONB, -- ["요약1", "요약2", "요약3"]
+    body TEXT, -- 에디터 재작성 본문
+    image_data JSONB, -- {"image_urls": ["url1", "url2"]}
+    origin_articles JSONB, -- 연관된 원본 기사 링크 리스트 (최대 3개)
+    published_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS idx_ai_article_published_at ON ai_article(published_at);
 
+-- [오늘의 뉴스낵: 오디오 브리핑]
 CREATE TABLE IF NOT EXISTS today_newsnack (
-                                              ai_content_id BIGINT PRIMARY KEY REFERENCES ai_content(id) ON DELETE CASCADE,
-                                              audio_data JSONB -- {"audioUrl": "...", "script": [...]}
+    id BIGSERIAL PRIMARY KEY,
+    audio_url TEXT NOT NULL,
+    -- items: [{"article_id": 1, "title": "제목", "audio_url": "url1", "start_time": 0.0, "end_time": 30.0}, ...]
+    items JSONB NOT NULL, 
+    published_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS idx_today_newsnack_published_at ON today_newsnack(published_at);
 
--- 유저 반응/통계 관련
+-- 유저 반응 및 통계 (AI 기사 전용)
 CREATE TABLE IF NOT EXISTS reaction_count (
-                                              ai_content_id BIGINT PRIMARY KEY REFERENCES ai_content(id),
-                                              happy_count INT DEFAULT 0,
-                                              surprised_count INT DEFAULT 0,
-                                              sad_count INT DEFAULT 0,
-                                              angry_count INT DEFAULT 0,
-                                              empathy_count INT DEFAULT 0
+    article_id BIGINT PRIMARY KEY REFERENCES ai_article(id) ON DELETE CASCADE,
+    happy_count INT DEFAULT 0,
+    surprised_count INT DEFAULT 0,
+    sad_count INT DEFAULT 0,
+    angry_count INT DEFAULT 0,
+    empathy_count INT DEFAULT 0
 );
