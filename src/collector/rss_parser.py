@@ -33,43 +33,48 @@ def collect_rss():
 
         for src in sources:
             logger.info(f"Collecting from {src['source']} - {src['category']}...")
-            feed = feedparser.parse(src['url'], request_headers=USER_AGENT)
-            
-            cat_id = category_map.get(src['category'])
-            if not cat_id:
-                logger.warning(f"Category '{src['category']}' not found in DB. Skipping...")
+            try:
+                feed = feedparser.parse(src['url'], request_headers=USER_AGENT)
+                
+                cat_id = category_map.get(src['category'])
+                if not cat_id:
+                    logger.warning(f"Category '{src['category']}' not found in DB. Skipping...")
+                    continue
+
+                article_data_list = []
+
+                for entry in feed.entries:
+                    total_processed += 1
+                    # 날짜 파싱 (없으면 현재 시간)
+                    if 'published_parsed' in entry and entry.published_parsed:
+                        pub_date = datetime.fromtimestamp(calendar.timegm(entry.published_parsed), tz=timezone.utc)
+                    else:
+                        pub_date = datetime.now(timezone.utc)
+
+                    article_data_list.append({
+                        "title": entry.get('title', '제목 없음'),
+                        "content": entry.get('summary', entry.get('description', '')),
+                        "origin_url": entry.link,
+                        "source": src['source'],
+                        "category_id": cat_id,
+                        "published_at": pub_date
+                    })
+
+                if article_data_list:
+                    stmt = insert(RawArticle).values(article_data_list)
+                    stmt = stmt.on_conflict_do_nothing(index_elements=['origin_url'])
+                    result = db.execute(stmt)
+
+                    inserted_in_this_batch = result.rowcount
+                    skipped_in_this_batch = len(article_data_list) - inserted_in_this_batch
+                    total_new_inserted += inserted_in_this_batch
+
+                    logger.info(f"Source: {src['source']} | New: {inserted_in_this_batch} | Skip: {skipped_in_this_batch} | Total: {len(article_data_list)}")
+            except Exception as e:
+                logger.error(f"Error processing source {src['source']}: {e}")
                 continue
-
-            article_data_list = []
-
-            for entry in feed.entries:
-                total_processed += 1
-                # 날짜 파싱 (없으면 현재 시간)
-                if 'published_parsed' in entry and entry.published_parsed:
-                    pub_date = datetime.fromtimestamp(calendar.timegm(entry.published_parsed), tz=timezone.utc)
-                else:
-                    pub_date = datetime.now(timezone.utc)
-
-                article_data_list.append({
-                    "title": entry.get('title', '제목 없음'),
-                    "content": entry.get('summary', entry.get('description', '')),
-                    "origin_url": entry.link,
-                    "source": src['source'],
-                    "category_id": cat_id,
-                    "published_at": pub_date
-                })
-
-            if article_data_list:
-                stmt = insert(RawArticle).values(article_data_list)
-                stmt = stmt.on_conflict_do_nothing(index_elements=['origin_url'])
-                result = db.execute(stmt)
-
-                inserted_in_this_batch = result.rowcount
-                skipped_in_this_batch = len(article_data_list) - inserted_in_this_batch
-                total_new_inserted += inserted_in_this_batch
-
-                logger.info(f"Source: {src['source']} | New: {inserted_in_this_batch} | Skip: {skipped_in_this_batch} | Total: {len(article_data_list)}")
-            time.sleep(0.5)
+            finally:
+                time.sleep(0.5)
 
     logger.info(f"All finished! Total: {total_processed}, New: {total_new_inserted}")
 
