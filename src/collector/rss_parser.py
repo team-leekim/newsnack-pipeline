@@ -1,5 +1,6 @@
-import feedparser
 import yaml
+import time
+import feedparser
 import logging
 import calendar
 from datetime import timezone, datetime
@@ -10,6 +11,10 @@ from src.database.connection import session_scope
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+USER_AGENT = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
+}
 
 def get_category_map(db):
     """DB에서 카테고리 이름:ID 매핑 정보를 가져옴"""
@@ -28,7 +33,7 @@ def collect_rss():
 
         for src in sources:
             logger.info(f"Collecting from {src['source']} - {src['category']}...")
-            feed = feedparser.parse(src['url'])
+            feed = feedparser.parse(src['url'], request_headers=USER_AGENT)
             
             cat_id = category_map.get(src['category'])
             if not cat_id:
@@ -64,6 +69,7 @@ def collect_rss():
                 total_new_inserted += inserted_in_this_batch
 
                 logger.info(f"Source: {src['source']} | New: {inserted_in_this_batch} | Skip: {skipped_in_this_batch} | Total: {len(article_data_list)}")
+            time.sleep(0.5)
 
     logger.info(f"All finished! Total: {total_processed}, New: {total_new_inserted}")
 
