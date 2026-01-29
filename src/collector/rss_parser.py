@@ -70,8 +70,8 @@ def collect_rss():
                     total_new_inserted += inserted_in_this_batch
 
                     logger.info(f"Source: {src['source']} | New: {inserted_in_this_batch} | Skip: {skipped_in_this_batch} | Total: {len(article_data_list)}")
-            except Exception as e:
-                logger.error(f"Error processing source {src['source']}: {e}")
+            except Exception:
+                logger.exception(f"Error processing source {src['source']}")
                 continue
             finally:
                 time.sleep(0.2)
