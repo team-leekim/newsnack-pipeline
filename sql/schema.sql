@@ -71,8 +71,8 @@ CREATE INDEX IF NOT EXISTS idx_ai_article_published_at ON ai_article(published_a
 CREATE TABLE IF NOT EXISTS today_newsnack (
     id BIGSERIAL PRIMARY KEY,
     audio_url TEXT NOT NULL,
-    -- items: [{"article_id": 1, "title": "제목", "audio_url": "url1", "start_time": 0.0, "end_time": 30.0}, ...]
-    items JSONB NOT NULL, 
+    -- briefing_articles: [{ "article_id": 101, "title": "엔비디아 역대급 실적 발표", "thumbnail_url": "https://example.com", "start_time": 0.0, "end_time": 20.5 }, ...]
+    briefing_articles JSONB NOT NULL, 
     published_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_today_newsnack_published_at ON today_newsnack(published_at);
