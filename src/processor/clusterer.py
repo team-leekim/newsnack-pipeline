@@ -41,7 +41,7 @@ def create_issue_from_cluster(db, category_id, cluster_articles):
 
     # 이슈 생성
     new_issue = Issue(
-        issue_title=representative_title, 
+        title=representative_title, 
         category_id=category_id,
         batch_time=datetime.now(timezone.utc),
         is_processed=False

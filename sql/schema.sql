@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS editor_category (
 -- 수집 파이프라인 관련
 CREATE TABLE IF NOT EXISTS issue (
     id BIGSERIAL PRIMARY KEY,
-    issue_title VARCHAR(255),
+    title VARCHAR(255),
     category_id INT REFERENCES category(id),
     batch_time TIMESTAMPTZ NOT NULL,
     is_processed BOOLEAN DEFAULT FALSE
