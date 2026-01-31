@@ -22,6 +22,7 @@ def get_category_map(db):
     return {cat.name: cat.id for cat in categories}
 
 def collect_rss():
+    start_time = time.perf_counter()
     with session_scope() as db:
         category_map = get_category_map(db)
         
@@ -74,9 +75,12 @@ def collect_rss():
                 logger.exception(f"Error processing source {src['source']}")
                 continue
             finally:
-                time.sleep(0.2)
+                time.sleep(0.1)
 
-    logger.info(f"All finished! Total: {total_processed}, New: {total_new_inserted}")
+    elapsed_seconds = time.perf_counter() - start_time
+    logger.info(
+        f"All finished! Total: {total_processed}, New: {total_new_inserted}, Elapsed: {elapsed_seconds:.2f}s"
+    )
 
 if __name__ == "__main__":
     collect_rss()
