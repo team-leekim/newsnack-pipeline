@@ -10,7 +10,8 @@ from src.database.models import RawArticle, Issue
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-SIMILARITY_THRESHOLD = 0.5
+SIMILARITY_THRESHOLD = 0.60
+MIN_CLUSTER_SIZE = 3
 
 def fetch_target_articles(db):
     """최근 24시간 내, 아직 이슈가 없는 기사 조회"""
@@ -67,7 +68,7 @@ def run_clustering():
         grouped_articles = group_articles_by_category(articles)
 
         for cat_id, cat_articles in grouped_articles.items():
-            if len(cat_articles) < 2:
+            if len(cat_articles) < MIN_CLUSTER_SIZE:
                 continue
             
             # 제목 벡터화
@@ -87,8 +88,8 @@ def run_clustering():
                     if score >= SIMILARITY_THRESHOLD and not visited[j]
                 ]
 
-                # 2개 이상이면 이슈 생성
-                if len(similar_indices) >= 2:
+                # MIN_CLUSTER_SIZE 이상이면 이슈 생성
+                if len(similar_indices) >= MIN_CLUSTER_SIZE:
                     cluster = [cat_articles[idx] for idx in similar_indices]
                     create_issue_from_cluster(db, cat_id, cluster)
                     
