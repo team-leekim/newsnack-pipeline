@@ -1,6 +1,6 @@
 -- 카테고리 초기 데이터 삽입
 INSERT INTO category (name) VALUES
-('정치'), ('경제'), ('사회'), ('국제'), ('문화'), ('IT'), ('스포츠'), ('연예'), ('라이프'), ('기타')
+('정치'), ('경제'), ('사회'), ('국제'), ('문화'), ('IT과학'), ('스포츠'), ('연예'), ('라이프'), ('기타')
 ON CONFLICT (name) DO NOTHING;
 
 -- 에디터 기본 정보 삽입
@@ -16,11 +16,11 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO editor_category (editor_id, category_id)
 SELECT e.id, c.id
 FROM (VALUES
-    ('박수박사수달', 'IT'), ('박수박사수달', '기타'),
+    ('박수박사수달', 'IT과학'),
     ('삐삐약이', '정치'), ('삐삐약이', '경제'),
     ('팩폭냥이', '사회'), ('팩폭냥이', '국제'),
     ('웃수저쿼카', '문화'), ('웃수저쿼카', '연예'),
-    ('공감갓댕이', '스포츠'), ('공감갓댕이', '라이프')
+    ('공감갓댕이', '스포츠'), ('공감갓댕이', '라이프'), ('공감갓댕이', '기타')
 ) AS v(editor_name, category_name)
 JOIN editor e ON e.name = v.editor_name
 JOIN category c ON c.name = v.category_name
