@@ -76,36 +76,6 @@ def select_target_issues(**context):
     
     return {"top_5": top_5, "extra": extra_n, "total": len(issue_ids)}
 
-def prepare_top5_payload(**context):
-    """Top 5 이슈 ID를 JSON payload로 변환"""
-    top_5 = context['task_instance'].xcom_pull(
-        task_ids='select_target_issues', 
-        key='top_5_issues'
-    )
-    
-    if not top_5:
-        logger.warning("No top 5 issues to generate")
-        return None
-    
-    payload = {"issue_ids": top_5}
-    logger.info(f"Top 5 payload: {payload}")
-    return json.dumps(payload)
-
-def prepare_extra_payload(**context):
-    """Extra 이슈 ID를 JSON payload로 변환"""
-    extra_issues = context['task_instance'].xcom_pull(
-        task_ids='select_target_issues', 
-        key='extra_issues'
-    )
-    
-    if not extra_issues:
-        logger.warning("No extra issues to generate")
-        return None
-    
-    payload = {"issue_ids": extra_issues}
-    logger.info(f"Extra payload: {payload}")
-    return json.dumps(payload)
-
 def check_generation_needed(**context):
     """생성할 이슈가 있는지 확인하여 후속 태스크 스킵 여부 결정"""
     top_5 = context['task_instance'].xcom_pull(
