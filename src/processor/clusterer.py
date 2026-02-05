@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from src.database.connection import session_scope
-from src.database.models import RawArticle, Issue
+from database.connection import session_scope
+from database.models import RawArticle, Issue
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
