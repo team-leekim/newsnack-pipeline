@@ -1,0 +1,140 @@
+name: Deploy Airflow DAGs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dags/**'
+      - 'src/**'
+      - 'requirements.txt'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies for validation
+        run: |
+          pip install apache-airflow==2.10.4 --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.4/constraints-3.12.txt"
+          pip install -r requirements.txt
+      
+      - name: Validate DAG syntax
+        run: |
+          export AIRFLOW__CORE__LOAD_EXAMPLES=False
+          export AIRFLOW__CORE__DAGS_FOLDER=$(pwd)/dags
+          for dag in dags/*.py; do
+            if [ -f "$dag" ]; then
+              echo "✓ Validating $dag..."
+              python "$dag" || exit 1
+            fi
+          done
+          echo "✅ All DAG files are valid"
+      
+      - name: Check if requirements.txt changed
+        id: check_requirements
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q '^requirements.txt$'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "⚠️ requirements.txt has changed - container restart required"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+      
+      - name: Add EC2 to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Deploy DAG files
+        run: |
+          echo "📦 Deploying DAG files..."
+          # dags/ 디렉토리 배포
+          rsync -avz --delete \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.DS_Store' \
+            dags/ ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/dags/
+          
+          echo "📦 Deploying source code..."
+          # src/ 디렉토리 배포
+          rsync -avz --delete \
+            --no-times --no-perms --no-owner --no-group \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.DS_Store' \
+            src/ ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/src/
+      
+      - name: Deploy requirements.txt if changed
+        if: steps.check_requirements.outputs.changed == 'true'
+        run: |
+          echo "📦 Deploying requirements.txt..."
+          scp requirements.txt ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/
+      
+      - name: Restart Airflow containers if requirements changed
+        if: steps.check_requirements.outputs.changed == 'true'
+        run: |
+          echo "🔄 Restarting Airflow containers (requirements.txt changed)..."
+          ssh ec2-user@${{ secrets.EC2_HOST }} '
+            cd ~/newsnack-data
+            
+            # 패키지 재설치를 위해 컨테이너 재시작
+            docker compose down
+            docker compose up -d
+            
+            # 컨테이너가 시작될 때까지 대기
+            sleep 10
+            docker compose ps
+          '
+          echo "✅ Containers restarted successfully"
+      
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying deployment..."
+          ssh ec2-user@${{ secrets.EC2_HOST }} '
+            echo "📁 Deployed DAG files:"
+            ls -lh ~/newsnack-data/dags/*.py 2>/dev/null || echo "No DAG files found"
+            
+            echo ""
+            echo "📁 Deployed source files:"
+            find ~/newsnack-data/src -name "*.py" -type f | head -10
+            
+            echo ""
+            echo "📊 Airflow Scheduler status:"
+            docker compose -f ~/newsnack-data/docker-compose.yml ps airflow-scheduler
+            
+            echo ""
+            echo "📋 Recent DAG processing logs:"
+            docker compose -f ~/newsnack-data/docker-compose.yml logs --tail=30 airflow-scheduler | grep -E "DAG|Processing" || echo "No DAG logs yet"
+          '
+      
+      - name: Notify deployment
+        if: success()
+        run: |
+          echo "================================"
+          echo "✅ Airflow DAGs deployed successfully!"
+          echo "================================"
+          echo "📍 Server: ${{ secrets.EC2_HOST }}"
+          echo "🕒 Time: $(date)"
+          echo "🔗 Airflow UI: http://${{ secrets.EC2_HOST }}:8081"
+          if [ "${{ steps.check_requirements.outputs.changed }}" == "true" ]; then
+            echo "⚠️  Requirements changed - containers were restarted"
+          fi
+          echo "================================"
