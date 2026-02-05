@@ -8,6 +8,7 @@ from airflow.providers.http.operators.http import SimpleHttpOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.sensors.sql import SqlSensor
 from airflow.models import Variable
+from airflow.exceptions import AirflowSkipException
 from datetime import datetime, timedelta
 import json
 import logging
@@ -114,7 +115,7 @@ def check_generation_needed(**context):
     
     if not top_5:
         logger.info("No issues to generate. This run will be skipped.")
-        raise Exception("No unprocessed issues found. Gracefully skipping DAG run.")
+        raise AirflowSkipException("No unprocessed issues found. Gracefully skipping DAG run.")
     
     logger.info(f"Found {len(top_5)} issues to process. Continuing...")
     return True
