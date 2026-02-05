@@ -1,3 +1,4 @@
+import os
 import yaml
 import time
 import feedparser
@@ -6,8 +7,8 @@ import calendar
 from datetime import timezone, datetime
 from sqlalchemy.dialects.postgresql import insert
 
-from src.database.models import RawArticle, Category
-from src.database.connection import session_scope
+from database.models import RawArticle, Category
+from database.connection import session_scope
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,10 +24,14 @@ def get_category_map(db):
 
 def collect_rss():
     start_time = time.perf_counter()
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    sources_path = os.path.join(current_dir, 'sources.yaml')
+
     with session_scope() as db:
         category_map = get_category_map(db)
         
-        with open("src/collector/sources.yaml", "r", encoding='utf-8') as f:
+        with open(sources_path, "r", encoding='utf-8') as f:
             sources = yaml.safe_load(f)
         
         total_processed = 0
