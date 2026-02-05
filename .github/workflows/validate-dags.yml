@@ -1,0 +1,59 @@
+name: Validate DAGs
+
+on:
+  pull_request:
+    paths:
+      - 'dags/**'
+      - 'src/**'
+      - 'requirements.txt'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          pip install apache-airflow==2.10.4 --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.4/constraints-3.12.txt"
+          pip install -r requirements.txt
+      
+      - name: Validate DAG syntax
+        run: |
+          export AIRFLOW__CORE__LOAD_EXAMPLES=False
+          export AIRFLOW__CORE__DAGS_FOLDER=$(pwd)/dags
+          
+          echo "🔍 Validating DAG files..."
+          for dag in dags/*.py; do
+            if [ -f "$dag" ]; then
+              echo "  ✓ Checking $(basename $dag)..."
+              python "$dag" || exit 1
+            fi
+          done
+          echo "✅ All DAG files passed validation"
+      
+      - name: Check Python code style (optional)
+        continue-on-error: true
+        run: |
+          pip install flake8
+          echo "🎨 Checking code style..."
+          flake8 dags/ src/ --max-line-length=120 --ignore=E501,W503 || true
+      
+      - name: Summary
+        if: success()
+        run: |
+          echo "================================"
+          echo "✅ DAG validation passed!"
+          echo "================================"
+          DAG_COUNT=$(find dags/ -name "*.py" -type f | wc -l)
+          echo "📊 Total DAG files: $DAG_COUNT"
+          echo "🐍 Python version: 3.12"
+          echo "🚀 Airflow version: 2.10.4"
+          echo "================================"
