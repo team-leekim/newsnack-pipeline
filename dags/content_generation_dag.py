@@ -24,7 +24,7 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
 }
 
-def select_target_issues(**context):
+def select_target_issues(ti, **context):
     """
     미처리 이슈 중 화제성(기사 개수) 높은 순으로 Top 5와 Extra N 선정
     Top 5: 오늘의 뉴스낵용
@@ -56,8 +56,8 @@ def select_target_issues(**context):
     if not results:
         logger.warning("No unprocessed issues found. Skipping content generation.")
         # 빈 리스트 반환
-        context['task_instance'].xcom_push(key='top_5_issues', value=[])
-        context['task_instance'].xcom_push(key='extra_issues', value=[])
+        ti.xcom_push(key='top_5_issues', value=[])
+        ti.xcom_push(key='extra_issues', value=[])
         return {"top_5": [], "extra": [], "total": 0}
     
     # issue_id만 추출
@@ -71,14 +71,14 @@ def select_target_issues(**context):
     logger.info(f"Extra IDs: {extra_n}")
     
     # XCom에 저장 (다음 태스크에서 사용)
-    context['task_instance'].xcom_push(key='top_5_issues', value=top_5)
-    context['task_instance'].xcom_push(key='extra_issues', value=extra_n)
+    ti.xcom_push(key='top_5_issues', value=top_5)
+    ti.xcom_push(key='extra_issues', value=extra_n)
     
     return {"top_5": top_5, "extra": extra_n, "total": len(issue_ids)}
 
-def check_generation_needed(**context):
+def check_generation_needed(ti, **context):
     """생성할 이슈가 있는지 확인하여 후속 태스크 스킵 여부 결정"""
-    top_5 = context['task_instance'].xcom_pull(
+    top_5 = ti.xcom_pull(
         task_ids='select_target_issues', 
         key='top_5_issues'
     )
@@ -106,14 +106,12 @@ with DAG(
     select_issues = PythonOperator(
         task_id='select_target_issues',
         python_callable=select_target_issues,
-        provide_context=True,
     )
     
     # Task 2: 생성 필요 여부 체크
     check_needed = PythonOperator(
         task_id='check_generation_needed',
         python_callable=check_generation_needed,
-        provide_context=True,
     )
     
     # Task 3: Top 5 AI 기사 생성 요청
