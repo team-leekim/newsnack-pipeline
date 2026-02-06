@@ -24,6 +24,13 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
 }
 
+common_api_headers = {
+    "Content-Type": "application/json",
+    "x-api-key": "{{ var.secret.AI_SERVER_API_KEY }}"
+}
+
+async_response_check = lambda response: response.status_code == 202
+
 def select_target_issues(ti, **context):
     """
     미처리 이슈 중 화제성(기사 개수) 높은 순으로 Top 5와 Extra N 선정
@@ -121,11 +128,8 @@ with DAG(
         endpoint='/ai-articles',
         method='POST',
         data='{"issue_ids": {{ task_instance.xcom_pull(task_ids="select_target_issues", key="top_5_issues") | tojson }} }',
-        headers={
-            "Content-Type": "application/json",
-            "x-api-key": "{{ var.value.AI_SERVER_API_KEY }}"
-        },
-        response_check=lambda response: response.status_code == 202,
+        headers=common_api_headers,
+        response_check=async_response_check,
         log_response=True,
     )
     
@@ -153,11 +157,8 @@ with DAG(
         http_conn_id='ai_server_api',
         endpoint='/today-newsnack',
         method='POST',
-        headers={
-            "Content-Type": "application/json",
-            "x-api-key": "{{ var.value.AI_SERVER_API_KEY }}"
-        },
-        response_check=lambda response: response.status_code == 202,
+        headers=common_api_headers,
+        response_check=async_response_check,
         log_response=True,
     )
     
@@ -168,11 +169,8 @@ with DAG(
         endpoint='/ai-articles',
         method='POST',
         data='{"issue_ids": {{ task_instance.xcom_pull(task_ids="select_target_issues", key="extra_issues") | tojson }} }',
-        headers={
-            "Content-Type": "application/json",
-            "x-api-key": "{{ var.value.AI_SERVER_API_KEY }}"
-        },
-        response_check=lambda response: response.status_code == 202,
+        headers=common_api_headers,
+        response_check=async_response_check,
         log_response=True,
     )
     
