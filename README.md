@@ -67,10 +67,13 @@ python -c "from processor.clusterer import run_clustering; run_clustering()"
 
 EC2 인스턴스에서 다음 단계를 수행합니다:
 
-#### 1. 컨테이너 시작
+#### 1. 이미지 빌드 및 컨테이너 시작
 
 ```bash
 cd ~/newsnack-data
+
+# 이미지 빌드
+docker build -t newsnack-airflow:latest .
 
 # 컨테이너 시작
 docker compose up -d

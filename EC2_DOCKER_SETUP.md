@@ -1,27 +1,33 @@
 # EC2 Airflow Docker Compose 설정 가이드
 
-이 프로젝트는 공식 Airflow 이미지를 사용하고 entrypoint에서 패키지를 설치합니다.
+이 프로젝트는 Dockerfile을 사용하여 패키지가 설치된 커스텀 Airflow 이미지를 빌드합니다.
 
 ## EC2 초기 설정
 
-### 1. 컨테이너 시작
+### 1. 이미지 빌드
 
 ```bash
 cd ~/newsnack-data
+
+# 최초 1회: 이미지 빌드 (docker build로 buildx 우회)
+docker build -t newsnack-airflow:latest .
 
 # 컨테이너 시작
 docker compose up -d
 ```
 
-### 2. 패키지 변경 시 재시작
+### 2. 패키지 변경 시 재빌드
 
-`setup.py`, `requirements.txt` 등이 변경되면 컨테이너를 재시작해야 합니다:
+`setup.py`, `requirements.txt` 등이 변경되면 이미지를 재빌드해야 합니다:
 
 ```bash
 cd ~/newsnack-data
 
 # 컨테이너 중지
 docker compose down
+
+# 이미지 재빌드 (docker build로 buildx 우회)
+docker build -t newsnack-airflow:latest .
 
 # 컨테이너 재시작
 docker compose up -d
@@ -55,7 +61,7 @@ docker compose logs airflow-scheduler --tail=50
 
 2. **재배포 시**: 
    - DAG/src 파일만 변경: 자동 반영 (볼륨 마운트)
-   - 패키지 설정 변경: 컨테이너 재시작 필요
+   - 패키지 설정 변경: 이미지 재빌드 필요
    - GitHub Actions에서 자동으로 처리됨
 
 3. **볼륨 마운트**: 
@@ -66,7 +72,7 @@ docker compose logs airflow-scheduler --tail=50
 
 레포지토리의 `docker-compose.yml` 파일을 사용하세요. 주요 특징:
 
-- **공식 이미지 사용**: entrypoint에서 패키지 설치
+- **커스텀 이미지**: Dockerfile로 빌드하여 패키지 사전 설치
 - **볼륨 마운트**: 개발 중 코드 변경 즉시 반영
 - **간단한 설정**: `_PIP_ADDITIONAL_REQUIREMENTS` 불필요
 
@@ -74,10 +80,12 @@ docker compose logs airflow-scheduler --tail=50
 # EC2에서 사용법
 cd ~/newsnack-data
 
-# 최초: 컨테이너 시작
+# 최초: 이미지 빌드 및 시작
+docker build -t newsnack-airflow:latest .
 docker compose up -d
 
-# 이후: 패키지 변경 시 재시작
+# 이후: 패키지 변경 시만 재빌드
+docker build -t newsnack-airflow:latest .
 docker compose down
 docker compose up -d
 

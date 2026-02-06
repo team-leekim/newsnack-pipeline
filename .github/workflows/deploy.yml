@@ -13,8 +13,8 @@ on:
       - 'setup.py'
       - 'pyproject.toml'
       - 'MANIFEST.in'
+      - 'Dockerfile'
       - 'docker-compose.yml'
-      - 'entrypoint.sh'
       - '.dockerignore'
       - '.github/workflows/deploy.yml'
 
@@ -68,9 +68,9 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED"
 
-          if echo "$CHANGED" | grep -Eq '(requirements\.txt|setup\.py|pyproject\.toml|MANIFEST\.in|docker-compose\.yml|entrypoint\.sh|\.dockerignore)'; then
+          if echo "$CHANGED" | grep -Eq '(requirements\.txt|setup\.py|pyproject\.toml|MANIFEST\.in|Dockerfile|docker-compose\.yml|\.dockerignore)'; then
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "⚠️ Package configuration has changed - container restart required"
+            echo "⚠️ Package configuration has changed - image rebuild required"
           else
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
@@ -108,27 +108,32 @@ jobs:
         if: steps.check_requirements.outputs.changed == 'true'
         run: |
           echo "📦 Deploying package configuration files..."
-          scp requirements.txt setup.py pyproject.toml MANIFEST.in .dockerignore docker-compose.yml entrypoint.sh ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/
+          scp requirements.txt setup.py pyproject.toml MANIFEST.in Dockerfile .dockerignore docker-compose.yml ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/
       
       - name: Rebuild and restart Airflow containers if package changed
         if: steps.check_requirements.outputs.changed == 'true'
         run: |
-          echo "🔄 Restarting Airflow containers (package configuration changed)..."
-          ssh ec2-user@${{ secrets.EC2_HOST }} '
+          echo "🔄 Rebuilding Airflow image (package configuration changed)..."
+          ssh ec2-user@${{ secrets.EC2_HOST }} ''
             cd ~/newsnack-data
             
-            chmod +x entrypoint.sh
+            # Stop containers
             docker compose down
+            
+            # Build image (using docker build to avoid buildx version requirement)
+            docker build -t newsnack-airflow:latest .
+            
+            # Start containers
             docker compose up -d
             
-            # 컨테이너가 시작될 때까지 대기
+            # Wait for containers to start
             sleep 15
             docker compose ps
             
-            # 패키지 설치 확인
+            # Verify package installation
             docker compose exec -T airflow-scheduler pip list | grep newsnack-data
-          '
-          echo "✅ Containers restarted successfully"
+          ''
+          echo "✅ Image rebuilt and containers restarted successfully"
       
       - name: Verify deployment
         run: |
