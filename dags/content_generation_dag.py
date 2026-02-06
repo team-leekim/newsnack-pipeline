@@ -125,7 +125,7 @@ with DAG(
             "Content-Type": "application/json",
             "x-api-key": "{{ var.value.AI_SERVER_API_KEY }}"
         },
-        response_check=lambda response: response.status_code in [200, 201],
+        response_check=lambda response: response.status_code == 202,
         log_response=True,
     )
     
@@ -157,7 +157,7 @@ with DAG(
             "Content-Type": "application/json",
             "x-api-key": "{{ var.value.AI_SERVER_API_KEY }}"
         },
-        response_check=lambda response: response.status_code in [200, 201],
+        response_check=lambda response: response.status_code == 202,
         log_response=True,
     )
     
@@ -172,7 +172,7 @@ with DAG(
             "Content-Type": "application/json",
             "x-api-key": "{{ var.value.AI_SERVER_API_KEY }}"
         },
-        response_check=lambda response: response.status_code in [200, 201],
+        response_check=lambda response: response.status_code == 202,
         log_response=True,
     )
     
