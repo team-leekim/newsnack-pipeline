@@ -68,7 +68,7 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED"
 
-          if echo "$CHANGED" | grep -Eq '^(requirements\.txt|setup\.py|pyproject\.toml|MANIFEST\.in|Dockerfile|docker-compose\.yml|\.dockerignore)$'; then
+          if echo "$CHANGED" | grep -Eq '(requirements\.txt|setup\.py|pyproject\.toml|MANIFEST\.in|Dockerfile|docker-compose\.yml|\.dockerignore)'; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "⚠️ Package configuration has changed - image rebuild required"
           else
