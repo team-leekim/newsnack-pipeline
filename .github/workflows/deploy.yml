@@ -15,6 +15,7 @@ on:
       - 'MANIFEST.in'
       - 'Dockerfile'
       - 'docker-compose.yml'
+      - '.dockerignore'
       - '.github/workflows/deploy.yml'
 
 jobs:
@@ -26,7 +27,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -55,7 +56,15 @@ jobs:
         id: check_requirements
         run: |
           set -e
-          CHANGED="$(git diff --name-only HEAD^ HEAD || true)"
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            CHANGED="$(git diff --name-only "$BEFORE" "$AFTER" || true)"
+          else
+            CHANGED="$(git diff --name-only HEAD^ HEAD || true)"
+          fi
+
           echo "Changed files:"
           echo "$CHANGED"
 
