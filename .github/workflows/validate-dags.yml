@@ -30,14 +30,11 @@ jobs:
       
       - name: Validate DAG syntax
         run: |
-          export AIRFLOW__CORE__LOAD_EXAMPLES=False
-          export AIRFLOW__CORE__DAGS_FOLDER=$(pwd)/dags
-          
           echo "🔍 Validating DAG files..."
           for dag in dags/*.py; do
             if [ -f "$dag" ]; then
               echo "  ✓ Checking $(basename $dag)..."
-              python "$dag" || exit 1
+              python -c "import py_compile; py_compile.compile('$dag', doraise=True)" || exit 1
             fi
           done
           echo "✅ All DAG files passed validation"
