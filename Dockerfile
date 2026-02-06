@@ -12,6 +12,7 @@ COPY src ./src
 USER root
 
 # Install build tools and package
+ENV PIP_USER=false
 RUN pip install --upgrade pip setuptools wheel && \
     pip install -e .
 
