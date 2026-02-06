@@ -114,25 +114,15 @@ jobs:
         if: steps.check_requirements.outputs.changed == 'true'
         run: |
           echo "🔄 Rebuilding Airflow image (package configuration changed)..."
-          ssh ec2-user@${{ secrets.EC2_HOST }} ''
-            cd ~/newsnack-data
-            
-            # Stop containers
-            docker compose down
-            
-            # Build image (using docker build to avoid buildx version requirement)
-            docker build -t newsnack-airflow:latest .
-            
-            # Start containers
-            docker compose up -d
-            
-            # Wait for containers to start
-            sleep 15
-            docker compose ps
-            
-            # Verify package installation
-            docker compose exec -T airflow-scheduler pip list | grep newsnack-data
-          ''
+          ssh ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
+          cd ~/newsnack-data
+          docker compose down
+          docker build -t newsnack-airflow:latest .
+          docker compose up -d
+          sleep 15
+          docker compose ps
+          docker compose exec -T airflow-scheduler pip list | grep newsnack-data
+          EOF
           echo "✅ Image rebuilt and containers restarted successfully"
       
       - name: Verify deployment
