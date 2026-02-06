@@ -26,12 +26,9 @@ def get_category_map(db):
 def collect_rss():
     start_time = time.perf_counter()
 
-    sources_path = None
     try:
         sources_path = resources.files("collector").joinpath("sources.yaml")
-    except Exception:
-        pass
-    if sources_path is None:
+    except (ImportError, AttributeError):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         sources_path = os.path.join(current_dir, "sources.yaml")
 
