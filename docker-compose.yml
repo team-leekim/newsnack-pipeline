@@ -9,7 +9,7 @@ services:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
-      - ./src:/opt/airflow/src  # 개발 중 코드 변경 즉시 반영
+      - ./src:/opt/airflow/src
     user: "${AIRFLOW_UID:-50000}:0"
     restart: always
 
@@ -21,6 +21,6 @@ services:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
-      - ./src:/opt/airflow/src  # 개발 중 코드 변경 즉시 반영
+      - ./src:/opt/airflow/src
     user: "${AIRFLOW_UID:-50000}:0"
     restart: always
