@@ -6,6 +6,9 @@ on:
       - 'dags/**'
       - 'src/**'
       - 'requirements.txt'
+      - 'setup.py'
+      - 'pyproject.toml'
+      - 'MANIFEST.in'
 
 jobs:
   validate:
@@ -23,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install apache-airflow==2.10.4 --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.4/constraints-3.12.txt"
-          pip install -r requirements.txt
+          pip install -e .
       
       - name: Validate DAG syntax
         run: |

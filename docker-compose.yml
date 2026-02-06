@@ -1,0 +1,26 @@
+services:
+  airflow-webserver:
+    build: .
+    command: webserver
+    ports:
+      - "8081:8080"
+    env_file: .env
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./src:/opt/airflow/src  # 개발 중 코드 변경 즉시 반영
+    user: "${AIRFLOW_UID:-50000}:0"
+    restart: always
+
+  airflow-scheduler:
+    build: .
+    command: scheduler
+    env_file: .env
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./src:/opt/airflow/src  # 개발 중 코드 변경 즉시 반영
+    user: "${AIRFLOW_UID:-50000}:0"
+    restart: always
