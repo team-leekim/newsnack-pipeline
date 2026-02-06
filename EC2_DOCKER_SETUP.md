@@ -13,7 +13,7 @@ cd ~/newsnack-data
 docker build -t newsnack-airflow:latest .
 
 # 컨테이너 시작
-docker compose up -d
+docker compose up -d --no-build
 ```
 
 ### 2. 패키지 변경 시 재빌드
