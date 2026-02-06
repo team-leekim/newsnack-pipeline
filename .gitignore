@@ -123,6 +123,7 @@ venv.bak/
 
 # etc
 .cursor/
+.github/instructions/
 test/
 data/
 output/

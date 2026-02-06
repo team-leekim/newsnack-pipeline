@@ -39,7 +39,7 @@ with DAG(
     description='매일 2회(07:00, 17:00 KST) 이슈 집계',
     # 한국 시간 07:00, 17:00 = UTC 22:00(전날), 08:00
     schedule_interval='0 22,8 * * *',  # 매일 22:00, 08:00 (UTC) = 07:00, 17:00 (KST)
-    start_date=datetime(2025, 1, 27),
+    start_date=datetime(2026, 2, 5),
     catchup=False,
     tags=['newsnack', 'clustering', 'issue'],
     max_active_runs=1,  # 동시 실행 방지

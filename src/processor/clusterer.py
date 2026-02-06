@@ -12,10 +12,11 @@ logger = logging.getLogger(__name__)
 
 SIMILARITY_THRESHOLD = 0.60
 MIN_CLUSTER_SIZE = 3
+ISSUE_TIME_WINDOW_HOURS = 14
 
 def fetch_target_articles(db):
-    """최근 24시간 내, 아직 이슈가 없는 기사 조회"""
-    time_limit = datetime.now(timezone.utc) - timedelta(hours=24)
+    """최근 14시간 내, 아직 이슈가 없는 기사 조회"""
+    time_limit = datetime.now(timezone.utc) - timedelta(hours=ISSUE_TIME_WINDOW_HOURS)
     logger.info(f"Fetching articles...")
     return db.query(RawArticle).filter(
         RawArticle.issue_id.is_(None),
@@ -47,7 +48,7 @@ def create_issue_from_cluster(db, category_id, cluster_articles):
         is_processed=False
     )
     db.add(new_issue)
-    db.flush() 
+    db.flush()
 
     # 기사 매핑 (UPDATE)
     for article in cluster_articles:
@@ -73,7 +74,7 @@ def run_clustering():
             
             # 제목 벡터화
             titles = [a.title for a in cat_articles]
-            vectorizer = TfidfVectorizer(token_pattern=r'(?u)\b\w\w+\b') 
+            vectorizer = TfidfVectorizer(token_pattern=r'(?u)\b\w\w+\b')
             tfidf_matrix = vectorizer.fit_transform(titles)
 
             cosine_sim = cosine_similarity(tfidf_matrix)
@@ -84,7 +85,7 @@ def run_clustering():
                 
                 # 유사 기사 찾기
                 similar_indices = [
-                    j for j, score in enumerate(cosine_sim[i]) 
+                    j for j, score in enumerate(cosine_sim[i])
                     if score >= SIMILARITY_THRESHOLD and not visited[j]
                 ]
 

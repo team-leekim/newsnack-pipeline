@@ -38,7 +38,7 @@ with DAG(
     default_args=default_args,
     description='매 30분마다 언론사 RSS 수집',
     schedule_interval='*/30 * * * *',  # 매 30분
-    start_date=datetime(2026, 2, 1),
+    start_date=datetime(2026, 2, 5),
     catchup=False,
     tags=['newsnack', 'collection', 'rss'],
     max_active_runs=1,  # 동시 실행 방지
