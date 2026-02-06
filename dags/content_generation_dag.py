@@ -121,7 +121,10 @@ with DAG(
         endpoint='/ai-articles',
         method='POST',
         data='{"issue_ids": {{ task_instance.xcom_pull(task_ids="select_target_issues", key="top_5_issues") | tojson }} }',
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": "{{ var.value.AI_SERVER_API_KEY }}"
+        },
         response_check=lambda response: response.status_code in [200, 201],
         log_response=True,
     )
@@ -150,7 +153,10 @@ with DAG(
         http_conn_id='ai_server_api',
         endpoint='/today-newsnack',
         method='POST',
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": "{{ var.value.AI_SERVER_API_KEY }}"
+        },
         response_check=lambda response: response.status_code in [200, 201],
         log_response=True,
     )
@@ -162,7 +168,10 @@ with DAG(
         endpoint='/ai-articles',
         method='POST',
         data='{"issue_ids": {{ task_instance.xcom_pull(task_ids="select_target_issues", key="extra_issues") | tojson }} }',
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": "{{ var.value.AI_SERVER_API_KEY }}"
+        },
         response_check=lambda response: response.status_code in [200, 201],
         log_response=True,
     )
