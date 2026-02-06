@@ -1,28 +1,22 @@
+x-airflow-common: &airflow-common
+  build: .
+  image: newsnack-airflow:latest
+  env_file: .env
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    - ./src:/opt/airflow/src
+  user: "${AIRFLOW_UID:-50000}:0"
+  restart: always
+
 services:
   airflow-webserver:
-    build: .
-    image: newsnack-airflow:latest
+    <<: *airflow-common
     command: webserver
     ports:
       - "8081:8080"
-    env_file: .env
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
-      - ./src:/opt/airflow/src
-    user: "${AIRFLOW_UID:-50000}:0"
-    restart: always
 
   airflow-scheduler:
-    build: .
-    image: newsnack-airflow:latest
+    <<: *airflow-common
     command: scheduler
-    env_file: .env
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
-      - ./src:/opt/airflow/src
-    user: "${AIRFLOW_UID:-50000}:0"
-    restart: always
