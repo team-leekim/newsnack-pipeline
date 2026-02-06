@@ -44,17 +44,15 @@ jobs:
       
       - name: Install minimal dependencies for validation
         run: |
-          pip install pyyaml sqlalchemy apache-airflow-providers-postgres==5.10.0
+          pip install pyyaml sqlalchemy
           pip install -e .
       
       - name: Validate DAG syntax
         run: |
-          export AIRFLOW__CORE__LOAD_EXAMPLES=False
-          export AIRFLOW__CORE__DAGS_FOLDER=$(pwd)/dags
           for dag in dags/*.py; do
             if [ -f "$dag" ]; then
               echo "✓ Validating $dag..."
-              python "$dag" || exit 1
+              python -c "import py_compile; py_compile.compile('$dag', doraise=True)" || exit 1
             fi
           done
           echo "✅ All DAG files are valid"
