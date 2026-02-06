@@ -1,11 +1,14 @@
 services:
   airflow-webserver:
-    build: .
+    image: apache/airflow:2.10.4-python3.12
+    entrypoint: /opt/airflow/entrypoint.sh
     command: webserver
     ports:
       - "8081:8080"
     env_file: .env
     volumes:
+      - ./:/opt/airflow/project
+      - ./entrypoint.sh:/opt/airflow/entrypoint.sh
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
@@ -14,10 +17,13 @@ services:
     restart: always
 
   airflow-scheduler:
-    build: .
+    image: apache/airflow:2.10.4-python3.12
+    entrypoint: /opt/airflow/entrypoint.sh
     command: scheduler
     env_file: .env
     volumes:
+      - ./:/opt/airflow/project
+      - ./entrypoint.sh:/opt/airflow/entrypoint.sh
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins

@@ -13,8 +13,8 @@ on:
       - 'setup.py'
       - 'pyproject.toml'
       - 'MANIFEST.in'
-      - 'Dockerfile'
       - 'docker-compose.yml'
+      - 'entrypoint.sh'
       - '.dockerignore'
       - '.github/workflows/deploy.yml'
 
@@ -68,9 +68,9 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED"
 
-          if echo "$CHANGED" | grep -Eq '(requirements\.txt|setup\.py|pyproject\.toml|MANIFEST\.in|Dockerfile|docker-compose\.yml|\.dockerignore)'; then
+          if echo "$CHANGED" | grep -Eq '(requirements\.txt|setup\.py|pyproject\.toml|MANIFEST\.in|docker-compose\.yml|entrypoint\.sh|\.dockerignore)'; then
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "⚠️ Package configuration has changed - image rebuild required"
+            echo "⚠️ Package configuration has changed - container restart required"
           else
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
@@ -108,18 +108,17 @@ jobs:
         if: steps.check_requirements.outputs.changed == 'true'
         run: |
           echo "📦 Deploying package configuration files..."
-          scp requirements.txt setup.py pyproject.toml MANIFEST.in Dockerfile .dockerignore docker-compose.yml ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/
+          scp requirements.txt setup.py pyproject.toml MANIFEST.in .dockerignore docker-compose.yml entrypoint.sh ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/
       
       - name: Rebuild and restart Airflow containers if package changed
         if: steps.check_requirements.outputs.changed == 'true'
         run: |
-          echo "🔄 Rebuilding Airflow image (package configuration changed)..."
+          echo "🔄 Restarting Airflow containers (package configuration changed)..."
           ssh ec2-user@${{ secrets.EC2_HOST }} '
             cd ~/newsnack-data
             
-            # 이미지 재빌드 및 컨테이너 재시작
+            chmod +x entrypoint.sh
             docker compose down
-            docker compose build --no-cache
             docker compose up -d
             
             # 컨테이너가 시작될 때까지 대기
@@ -129,7 +128,7 @@ jobs:
             # 패키지 설치 확인
             docker compose exec -T airflow-scheduler pip list | grep newsnack-data
           '
-          echo "✅ Image rebuilt and containers restarted successfully"
+          echo "✅ Containers restarted successfully"
       
       - name: Verify deployment
         run: |

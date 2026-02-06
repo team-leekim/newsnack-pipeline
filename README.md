@@ -67,13 +67,10 @@ python -c "from processor.clusterer import run_clustering; run_clustering()"
 
 EC2 인스턴스에서 다음 단계를 수행합니다:
 
-#### 1. 이미지 빌드 및 컨테이너 시작
+#### 1. 컨테이너 시작
 
 ```bash
 cd ~/newsnack-data
-
-# 커스텀 Airflow 이미지 빌드 (패키지 포함)
-docker compose build
 
 # 컨테이너 시작
 docker compose up -d
@@ -99,11 +96,10 @@ docker compose ps
 ```bash
 cd ~/newsnack-data
 docker compose down
-docker compose build --no-cache
 docker compose up -d
 ```
 
-**참고**: DAG나 src 코드 변경은 볼륨 마운트로 자동 반영되므로 재빌드 불필요
+**참고**: DAG나 src 코드 변경은 볼륨 마운트로 자동 반영되므로 재시작 불필요
 
 ### 자동 배포
 
