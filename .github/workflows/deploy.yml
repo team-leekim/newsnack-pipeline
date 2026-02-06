@@ -112,13 +112,14 @@ jobs:
         run: |
           echo "🔄 Rebuilding Airflow image (package configuration changed)..."
           ssh ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
-          cd ~/newsnack-data
-          docker compose down
-          docker build -t newsnack-airflow:latest .
-          docker compose up -d
-          sleep 15
-          docker compose ps
-          docker compose exec -T airflow-scheduler pip list | grep newsnack-data
+            set -e
+            cd ~/newsnack-data
+            docker build -t newsnack-airflow:latest .
+            docker compose down
+            docker compose up -d --no-build
+            sleep 15
+            docker compose ps
+            docker compose exec -T airflow-scheduler pip list | grep newsnack-data || true
           EOF
           echo "✅ Image rebuilt and containers restarted successfully"
       

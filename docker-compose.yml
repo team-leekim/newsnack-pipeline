@@ -1,6 +1,7 @@
 services:
   airflow-webserver:
     build: .
+    image: newsnack-airflow:latest
     command: webserver
     ports:
       - "8081:8080"
@@ -15,6 +16,7 @@ services:
 
   airflow-scheduler:
     build: .
+    image: newsnack-airflow:latest
     command: scheduler
     env_file: .env
     volumes:
