@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
 
-python -m pip install --user -e /opt/airflow/project
+python -m pip install -e /opt/airflow/project
 
 exec "$@"
