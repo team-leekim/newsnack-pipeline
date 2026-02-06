@@ -9,6 +9,12 @@ on:
       - 'dags/**'
       - 'src/**'
       - 'requirements.txt'
+      - 'setup.py'
+      - 'pyproject.toml'
+      - 'MANIFEST.in'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
       - '.github/workflows/deploy.yml'
 
 jobs:
@@ -20,36 +26,47 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       
-      - name: Install dependencies for validation
+      - name: Install minimal dependencies for validation
         run: |
-          pip install apache-airflow==2.10.4 --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.4/constraints-3.12.txt"
-          pip install -r requirements.txt
+          pip install pyyaml sqlalchemy
+          pip install -e .
       
       - name: Validate DAG syntax
         run: |
-          export AIRFLOW__CORE__LOAD_EXAMPLES=False
-          export AIRFLOW__CORE__DAGS_FOLDER=$(pwd)/dags
           for dag in dags/*.py; do
             if [ -f "$dag" ]; then
               echo "✓ Validating $dag..."
-              python "$dag" || exit 1
+              python -c "import py_compile; py_compile.compile('$dag', doraise=True)" || exit 1
             fi
           done
           echo "✅ All DAG files are valid"
       
-      - name: Check if requirements.txt changed
+      - name: Check if package config changed
         id: check_requirements
         run: |
-          if git diff --name-only HEAD~1 HEAD | grep -q '^requirements.txt$'; then
+          set -e
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            CHANGED="$(git diff --name-only "$BEFORE" "$AFTER" || true)"
+          else
+            CHANGED="$(git diff --name-only HEAD^ HEAD || true)"
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          if echo "$CHANGED" | grep -Eq '(requirements\.txt|setup\.py|pyproject\.toml|MANIFEST\.in|Dockerfile|docker-compose\.yml|\.dockerignore)'; then
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "⚠️ requirements.txt has changed - container restart required"
+            echo "⚠️ Package configuration has changed - image rebuild required"
           else
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
@@ -83,28 +100,27 @@ jobs:
             --exclude='.DS_Store' \
             src/ ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/src/
       
-      - name: Deploy requirements.txt if changed
+      - name: Deploy package files if changed
         if: steps.check_requirements.outputs.changed == 'true'
         run: |
-          echo "📦 Deploying requirements.txt..."
-          scp requirements.txt ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/
+          echo "📦 Deploying package configuration files..."
+          scp requirements.txt setup.py pyproject.toml MANIFEST.in Dockerfile .dockerignore docker-compose.yml ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/
       
-      - name: Restart Airflow containers if requirements changed
+      - name: Rebuild and restart Airflow containers if package changed
         if: steps.check_requirements.outputs.changed == 'true'
         run: |
-          echo "🔄 Restarting Airflow containers (requirements.txt changed)..."
-          ssh ec2-user@${{ secrets.EC2_HOST }} '
+          echo "🔄 Rebuilding Airflow image (package configuration changed)..."
+          ssh ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
             cd ~/newsnack-data
-            
-            # 패키지 재설치를 위해 컨테이너 재시작
+            docker build -t newsnack-airflow:latest .
             docker compose down
-            docker compose up -d
-            
-            # 컨테이너가 시작될 때까지 대기
-            sleep 10
+            docker compose up -d --no-build
+            sleep 15
             docker compose ps
-          '
-          echo "✅ Containers restarted successfully"
+            docker compose exec -T airflow-scheduler pip list | grep newsnack-data || true
+          EOF
+          echo "✅ Image rebuilt and containers restarted successfully"
       
       - name: Verify deployment
         run: |

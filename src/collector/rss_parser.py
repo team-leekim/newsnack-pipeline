@@ -4,6 +4,7 @@ import time
 import feedparser
 import logging
 import calendar
+from importlib import resources
 from datetime import timezone, datetime
 from sqlalchemy.dialects.postgresql import insert
 
@@ -25,14 +26,22 @@ def get_category_map(db):
 def collect_rss():
     start_time = time.perf_counter()
 
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    sources_path = os.path.join(current_dir, 'sources.yaml')
+    try:
+        sources_path = resources.files("collector").joinpath("sources.yaml")
+    except (ImportError, AttributeError):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        sources_path = os.path.join(current_dir, "sources.yaml")
 
     with session_scope() as db:
         category_map = get_category_map(db)
-        
-        with open(sources_path, "r", encoding='utf-8') as f:
-            sources = yaml.safe_load(f)
+
+        if isinstance(sources_path, (str, os.PathLike)):
+            with open(sources_path, "r", encoding="utf-8") as f:
+                sources = yaml.safe_load(f)
+        else:
+            with resources.as_file(sources_path) as sources_file:
+                with open(sources_file, "r", encoding="utf-8") as f:
+                    sources = yaml.safe_load(f)
         
         total_processed = 0
         total_new_inserted = 0

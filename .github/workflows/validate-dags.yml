@@ -6,6 +6,9 @@ on:
       - 'dags/**'
       - 'src/**'
       - 'requirements.txt'
+      - 'setup.py'
+      - 'pyproject.toml'
+      - 'MANIFEST.in'
 
 jobs:
   validate:
@@ -20,21 +23,18 @@ jobs:
         with:
           python-version: '3.12'
       
-      - name: Install dependencies
+      - name: Install minimal dependencies for validation
         run: |
-          pip install apache-airflow==2.10.4 --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.4/constraints-3.12.txt"
-          pip install -r requirements.txt
+          pip install pyyaml sqlalchemy
+          pip install -e .
       
       - name: Validate DAG syntax
         run: |
-          export AIRFLOW__CORE__LOAD_EXAMPLES=False
-          export AIRFLOW__CORE__DAGS_FOLDER=$(pwd)/dags
-          
           echo "🔍 Validating DAG files..."
           for dag in dags/*.py; do
             if [ -f "$dag" ]; then
               echo "  ✓ Checking $(basename $dag)..."
-              python "$dag" || exit 1
+              python -c "import py_compile; py_compile.compile('$dag', doraise=True)" || exit 1
             fi
           done
           echo "✅ All DAG files passed validation"

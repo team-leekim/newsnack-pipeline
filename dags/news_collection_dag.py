@@ -5,7 +5,6 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-import sys
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,9 +20,6 @@ default_args = {
 
 def run_rss_collector():
     """RSS 수집 실행"""
-    # src 디렉토리를 Python path에 추가
-    sys.path.insert(0, '/opt/airflow/src')
-    
     try:
         from collector.rss_parser import collect_rss
         logger.info("Starting RSS collection...")
@@ -38,7 +34,7 @@ with DAG(
     default_args=default_args,
     description='매 30분마다 언론사 RSS 수집',
     schedule_interval='*/30 * * * *',  # 매 30분
-    start_date=datetime(2026, 2, 1),
+    start_date=datetime(2026, 2, 5),
     catchup=False,
     tags=['newsnack', 'collection', 'rss'],
     max_active_runs=1,  # 동시 실행 방지
