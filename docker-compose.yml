@@ -1,6 +1,6 @@
 x-airflow-common: &airflow-common
   build: .
-  image: newsnack-airflow:latest
+  image: newsnack-pipeline:latest
   env_file: .env
   volumes:
     - ./dags:/opt/airflow/dags

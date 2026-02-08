@@ -1,16 +1,16 @@
 # EC2 Airflow Docker Compose 설정 가이드
 
-이 프로젝트는 Dockerfile을 사용하여 패키지가 설치된 커스텀 Airflow 이미지를 빌드합니다.
+이 프로젝트는 Dockerfile을 사용하여 newsnack-etl 패키지가 설치된 커스텀 Airflow 이미지를 빌드합니다.
 
 ## EC2 초기 설정
 
 ### 1. 이미지 빌드
 
 ```bash
-cd ~/newsnack-data
+cd ~/newsnack-pipeline
 
 # 최초 1회: 이미지 빌드 (docker build로 buildx 우회)
-docker build -t newsnack-airflow:latest .
+docker build -t newsnack-pipeline:latest .
 
 # 컨테이너 시작
 docker compose up -d --no-build
@@ -21,13 +21,13 @@ docker compose up -d --no-build
 `setup.py`, `requirements.txt` 등이 변경되면 이미지를 재빌드해야 합니다:
 
 ```bash
-cd ~/newsnack-data
+cd ~/newsnack-pipeline
 
 # 컨테이너 중지
 docker compose down
 
 # 이미지 재빌드 (docker build로 buildx 우회)
-docker build -t newsnack-airflow:latest .
+docker build -t newsnack-pipeline:latest .
 
 # 컨테이너 재시작
 docker compose up -d
@@ -37,7 +37,7 @@ docker compose up -d
 
 ```bash
 # 패키지 설치 확인
-docker compose exec airflow-scheduler pip list | grep newsnack-data
+docker compose exec airflow-scheduler pip list | grep newsnack-etl
 
 # Import 테스트
 docker compose exec airflow-scheduler python -c "from database.connection import session_scope; print('✅ Import 성공!')"
@@ -78,14 +78,14 @@ docker compose logs airflow-scheduler --tail=50
 
 ```bash
 # EC2에서 사용법
-cd ~/newsnack-data
+cd ~/newsnack-pipeline
 
 # 최초: 이미지 빌드 및 시작
-docker build -t newsnack-airflow:latest .
+docker build -t newsnack-pipeline:latest .
 docker compose up -d
 
 # 이후: 패키지 변경 시만 재빌드
-docker build -t newsnack-airflow:latest .
+docker build -t newsnack-pipeline:latest .
 docker compose down
 docker compose up -d
 
