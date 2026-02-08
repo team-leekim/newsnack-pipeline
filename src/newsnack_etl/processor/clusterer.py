@@ -96,7 +96,7 @@ def run_clustering():
     
     with session_scope() as db:
         article_repo = ArticleRepository(db)
-        issue_repo = IssueRepository(db)
+        issue_repo = IssueRepository(db, article_repo)
         
         # 미처리 기사 조회
         articles = article_repo.fetch_unissued_articles(hours=ISSUE_TIME_WINDOW_HOURS)

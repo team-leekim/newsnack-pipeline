@@ -3,18 +3,24 @@ Issue Repository
 
 Issue 테이블에 대한 DB I/O 담당
 """
-from typing import List
+from __future__ import annotations
+
+from typing import List, TYPE_CHECKING
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
-from newsnack_etl.database.models import Issue, RawArticle
+from newsnack_etl.database.models import Issue
+
+if TYPE_CHECKING:
+    from newsnack_etl.repository.article_repository import ArticleRepository
 
 
 class IssueRepository:
     """Issue CRUD"""
     
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, article_repo: ArticleRepository) -> None:
         self.db = db
+        self.article_repo = article_repo
     
     def create_issue(
         self, 
@@ -45,11 +51,9 @@ class IssueRepository:
         
         # 기사 연결
         if article_ids:
-            self.db.query(RawArticle).filter(
-                RawArticle.id.in_(article_ids)
-            ).update(
-                {RawArticle.issue_id: new_issue.id},
-                synchronize_session=False
+            self.article_repo.link_articles_to_issue(
+                article_ids=article_ids,
+                issue_id=new_issue.id
             )
         
         return new_issue
