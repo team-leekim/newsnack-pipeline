@@ -3,9 +3,9 @@ requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "newsnack-data"
+name = "newsnack-etl"
 version = "0.1.0"
-description = "뉴스 수집 및 이슈 클러스터링 자동화 시스템"
+description = "뉴스 수집 및 이슈 클러스터링 ETL 시스템"
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [
