@@ -1,6 +1,6 @@
-x-airflow-common: &airflow-common
+x-pipeline-common: &pipeline-common
   build: .
-  image: newsnack-airflow:latest
+  image: newsnack-pipeline:latest
   env_file: .env
   volumes:
     - ./dags:/opt/airflow/dags
@@ -11,12 +11,12 @@ x-airflow-common: &airflow-common
   restart: always
 
 services:
-  airflow-webserver:
-    <<: *airflow-common
+  pipeline-webserver:
+    <<: *pipeline-common
     command: webserver
     ports:
       - "8081:8080"
 
-  airflow-scheduler:
-    <<: *airflow-common
+  pipeline-scheduler:
+    <<: *pipeline-common
     command: scheduler

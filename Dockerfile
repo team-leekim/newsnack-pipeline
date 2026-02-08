@@ -9,4 +9,4 @@ COPY --chown=airflow:root src ./src
 RUN pip install --no-deps -e .
 
 # Verify installation
-RUN pip list | grep newsnack-data
+RUN pip list | grep newsnack-pipeline
