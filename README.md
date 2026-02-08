@@ -18,14 +18,6 @@ graph LR
     G -->|저장| D
     D -->|조회| H["newsnack-backend<br/>API Server"]
     H -->|배포| I["사용자"]
-    
-    style B fill:#4A90E2
-    style C fill:#4A90E2
-    style E fill:#4A90E2
-    style D fill:#50C878
-    style F fill:#FF6B6B
-    style H fill:#FFA500
-    
 ```
 
 ## 프로젝트 구조 (계획)
