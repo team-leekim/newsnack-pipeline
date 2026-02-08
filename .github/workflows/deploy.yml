@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - hotfix/*
+      - refactor/*
     paths:
       - 'dags/**'
       - 'src/**'
