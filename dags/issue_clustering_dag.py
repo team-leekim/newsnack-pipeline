@@ -21,7 +21,7 @@ default_args = {
 def run_issue_clustering():
     """이슈 클러스터링 실행"""
     try:
-        from processor.clusterer import run_clustering
+        from newsnack_etl.processor import run_clustering
         logger.info("Starting issue clustering...")
         run_clustering()
         logger.info("Issue clustering completed successfully")

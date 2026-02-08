@@ -21,7 +21,7 @@ default_args = {
 def run_rss_collector():
     """RSS 수집 실행"""
     try:
-        from collector.rss_parser import collect_rss
+        from newsnack_etl.collector import collect_rss
         logger.info("Starting RSS collection...")
         collect_rss()
         logger.info("RSS collection completed successfully")
