@@ -1,4 +1,4 @@
-# Newsnack Pipeline
+# 뉴스낵 Pipeline
 
 Apache Airflow 기반 뉴스 데이터 ETL 및 오케스트레이션 파이프라인입니다.
 
@@ -20,7 +20,7 @@ graph LR
     H -->|배포| I["사용자"]
 ```
 
-## 프로젝트 구조 (계획)
+## 프로젝트 구조
 
 ```
 newsnack-pipeline/
@@ -62,8 +62,8 @@ DATABASE_URL=postgresql://user:password@localhost:5432/newsnack
 EOF
 
 # 4. 스크립트 실행
-python -m src.collector.rss_parser
-python -m src.processor.clusterer
+python -m newsnack_etl.collector.rss_parser
+python -m newsnack_etl.processor.clusterer
 ```
 
 ### 자동 배포 (GitHub Actions)
@@ -88,10 +88,10 @@ python -m src.processor.clusterer
 ## Import 경로
 
 ```python
-from collector.rss_parser import collect_rss
-from processor.clusterer import run_clustering
-from database.connection import session_scope
-from database.models import RawArticle, Issue, Category
+from newsnack_etl.collector import collect_rss
+from newsnack_etl.processor import run_clustering
+from newsnack_etl.database import session_scope, RawArticle, Issue, Category
+from newsnack_etl.repository import ArticleRepository, IssueRepository
 ```
 
 ## 트러블슈팅
