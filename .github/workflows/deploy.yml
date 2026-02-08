@@ -1,4 +1,4 @@
-name: Deploy Airflow DAGs
+name: Deploy Newsnack Pipeline
 
 on:
   push:
@@ -89,7 +89,7 @@ jobs:
             --exclude='__pycache__' \
             --exclude='*.pyc' \
             --exclude='.DS_Store' \
-            dags/ ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/dags/
+            dags/ ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-pipeline/dags/
           
           echo "📦 Deploying source code..."
           # src/ 디렉토리 배포
@@ -98,13 +98,13 @@ jobs:
             --exclude='__pycache__' \
             --exclude='*.pyc' \
             --exclude='.DS_Store' \
-            src/ ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/src/
+            src/ ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-pipeline/src/
       
       - name: Deploy package files if changed
         if: steps.check_requirements.outputs.changed == 'true'
         run: |
           echo "📦 Deploying package configuration files..."
-          scp requirements.txt setup.py pyproject.toml MANIFEST.in Dockerfile .dockerignore docker-compose.yml ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-data/
+          scp requirements.txt setup.py pyproject.toml MANIFEST.in Dockerfile .dockerignore docker-compose.yml ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-pipeline/
       
       - name: Rebuild and restart Airflow containers if package changed
         if: steps.check_requirements.outputs.changed == 'true'
@@ -112,13 +112,13 @@ jobs:
           echo "🔄 Rebuilding Airflow image (package configuration changed)..."
           ssh ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
-            cd ~/newsnack-data
-            docker build -t newsnack-airflow:latest .
+            cd ~/newsnack-pipeline
+            docker build -t newsnack-pipeline:latest .
             docker compose down
             docker compose up -d --no-build
             sleep 15
             docker compose ps
-            docker compose exec -T airflow-scheduler pip list | grep newsnack-data || true
+            docker compose exec -T airflow-scheduler pip list | grep newsnack-etl || true
           EOF
           echo "✅ Image rebuilt and containers restarted successfully"
       
@@ -127,19 +127,19 @@ jobs:
           echo "🔍 Verifying deployment..."
           ssh ec2-user@${{ secrets.EC2_HOST }} '
             echo "📁 Deployed DAG files:"
-            ls -lh ~/newsnack-data/dags/*.py 2>/dev/null || echo "No DAG files found"
+            ls -lh ~/newsnack-pipeline/dags/*.py 2>/dev/null || echo "No DAG files found"
             
             echo ""
             echo "📁 Deployed source files:"
-            find ~/newsnack-data/src -name "*.py" -type f | head -10
+            find ~/newsnack-pipeline/src -name "*.py" -type f | head -10
             
             echo ""
             echo "📊 Airflow Scheduler status:"
-            docker compose -f ~/newsnack-data/docker-compose.yml ps airflow-scheduler
+            docker compose -f ~/newsnack-pipeline/docker-compose.yml ps airflow-scheduler
             
             echo ""
             echo "📋 Recent DAG processing logs:"
-            docker compose -f ~/newsnack-data/docker-compose.yml logs --tail=30 airflow-scheduler | grep -E "DAG|Processing" || echo "No DAG logs yet"
+            docker compose -f ~/newsnack-pipeline/docker-compose.yml logs --tail=30 airflow-scheduler | grep -E "DAG|Processing" || echo "No DAG logs yet"
           '
       
       - name: Notify deployment
