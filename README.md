@@ -90,16 +90,16 @@ python -m src.processor.clusterer
 | DAG | 스케줄 | 역할 |
 |-----|--------|------|
 | `news_collection_dag` | `*/30 * * * *` | RSS 피드에서 뉴스 수집 |
-| `issue_clustering_dag` | `0 7,17 * * *` | 유사 기사 군집화 |
+| `issue_clustering_dag` | `0 22,8 * * *` | 유사 기사 군집화 |
 | `content_generation_dag` | `30 22,8 * * *` | AI 콘텐츠 생성 |
 
 ## Import 경로
 
 ```python
-from src.collector.rss_parser import collect_rss
-from src.processor.clusterer import run_clustering
-from src.database.connection import session_scope
-from src.database.models import RawArticle, Issue, Category
+from collector.rss_parser import collect_rss
+from processor.clusterer import run_clustering
+from database.connection import session_scope
+from database.models import RawArticle, Issue, Category
 ```
 
 ## 트러블슈팅
