@@ -10,7 +10,6 @@ from airflow.sensors.sql import SqlSensor
 from airflow.models import Variable
 from airflow.exceptions import AirflowSkipException
 from datetime import datetime, timedelta
-import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ default_args = {
 
 common_api_headers = {
     "Content-Type": "application/json",
-    "x-api-key": "{{ var.secret.AI_SERVER_API_KEY }}"
+    "x-api-key": "{{ var.value.AI_SERVER_API_KEY }}"
 }
 
 async_response_check = lambda response: response.status_code == 202
