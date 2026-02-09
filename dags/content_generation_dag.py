@@ -10,7 +10,6 @@ from airflow.sensors.sql import SqlSensor
 from airflow.models import Variable
 from airflow.exceptions import AirflowSkipException
 from datetime import datetime, timedelta
-import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ default_args = {
 
 common_api_headers = {
     "Content-Type": "application/json",
-    "x-api-key": "{{ var.secret.AI_SERVER_API_KEY }}"
+    "x-api-key": "{{ var.value.AI_SERVER_API_KEY }}"
 }
 
 async_response_check = lambda response: response.status_code == 202
@@ -134,20 +133,20 @@ with DAG(
     )
     
     # Task 4: Top 5 생성 완료 대기 (SQL Sensor)
-    # is_processed가 모두 TRUE가 될 때까지 대기
+    # 완료된 이슈가 하나라도 있으면 통과 (부분 완료 허용)
     wait_top5 = SqlSensor(
         task_id='wait_for_top5_completion',
         conn_id='newsnack_db_conn',
-        # Top 5 이슈가 모두 처리되었는지 확인
-        # COUNT(*) = 0 이면 미처리 이슈가 없다는 의미 (완료)
+        # Top 5 중 완료된 것이 하나라도 있으면 통과
+        # 콘텐츠당 2분 이내 소요 예상
         sql="""
-            SELECT COUNT(*) = 0 
+            SELECT COUNT(*) > 0 
             FROM issue 
             WHERE id = ANY(ARRAY[{{ task_instance.xcom_pull(task_ids='select_target_issues', key='top_5_issues') | join(',') }}])
-            AND is_processed = FALSE
+            AND is_processed = TRUE
         """,
         poke_interval=30,  # 30초마다 체크
-        timeout=1800,  # 30분 타임아웃
+        timeout=600,  # 10분 타임아웃
         mode='poke',
     )
     
