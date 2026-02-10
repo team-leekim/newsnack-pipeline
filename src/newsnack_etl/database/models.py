@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, BigInteger, String, Text, DateTime, ForeignKey, Boolean
+import enum
+from sqlalchemy import Column, Integer, BigInteger, String, Text, DateTime, ForeignKey, Enum as SqlEnum
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
@@ -21,10 +22,17 @@ class RawArticle(Base):
     crawled_at = Column(DateTime(timezone=True), server_default=func.now())
     issue_id = Column(BigInteger, ForeignKey("issue.id"), nullable=True)
 
+class IssueStatusEnum(str, enum.Enum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELED = "CANCELED"
+
 class Issue(Base):
     __tablename__ = "issue"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     title = Column(String(255), nullable=True)
     category_id = Column(Integer, ForeignKey("category.id"))
-    batch_time = Column(DateTime(timezone=True), nullable=False)
-    is_processed = Column(Boolean, default=False)
+    batch_time = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    processing_status = Column(SqlEnum(IssueStatusEnum), nullable=False, default=IssueStatusEnum.PENDING)

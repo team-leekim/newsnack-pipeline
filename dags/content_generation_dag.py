@@ -51,7 +51,7 @@ def select_target_issues(ti, **context):
         SELECT i.id, COUNT(ra.id) as article_count
         FROM issue i
         LEFT JOIN raw_article ra ON ra.issue_id = i.id
-        WHERE i.is_processed = FALSE
+        WHERE i.processing_status = 'PENDING'
         GROUP BY i.id
         ORDER BY article_count DESC, i.batch_time DESC
         LIMIT %s
@@ -143,7 +143,7 @@ with DAG(
             SELECT COUNT(*) > 0 
             FROM issue 
             WHERE id = ANY(ARRAY[{{ task_instance.xcom_pull(task_ids='select_target_issues', key='top_5_issues') | join(',') }}])
-            AND is_processed = TRUE
+            AND processing_status = 'COMPLETED'
         """,
         poke_interval=30,  # 30초마다 체크
         timeout=600,  # 10분 타임아웃
