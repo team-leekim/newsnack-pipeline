@@ -24,18 +24,18 @@ graph LR
 
 ```
 newsnack-pipeline/
-├── dags/                    # Airflow DAG 정의
+├── dags/                             # Airflow DAG 정의
 │   ├── news_collection_dag.py        # 뉴스 수집 (RSS)
 │   ├── issue_clustering_dag.py       # 이슈 군집화
 │   └── content_generation_dag.py     # AI 콘텐츠 생성
-├── src/newsnack_etl/               # Python ETL 패키지
-│   ├── collector/           # 데이터 수집
+├── src/newsnack_etl/                 # Python ETL 패키지
+│   ├── collector/                    # 데이터 수집
 │   │   ├── rss_parser.py
 │   │   └── sources.yaml
-│   ├── processor/           # 데이터 처리
+│   ├── processor/                    # 데이터 처리
 │   │   └── clusterer.py
-│   ├── repository/          # DB I/O
-│   └── database/            # DB 설정
+│   ├── repository/                   # DB I/O
+│   └── database/                     # DB 설정
 │       ├── connection.py
 │       └── models.py
 ├── docker-compose.yml
