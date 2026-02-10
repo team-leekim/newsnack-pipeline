@@ -39,9 +39,6 @@
   url: "https://www.newsis.com/RSS/square.xml"
   category: "기타"
 - source: "뉴시스"
-  url: "https://www.newsis.com/RSS/photo.xml"
-  category: "기타"
-- source: "뉴시스"
   url: "https://www.newsis.com/RSS/newsiseyes.xml"
   category: "기타"
 
