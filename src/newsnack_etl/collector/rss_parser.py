@@ -24,15 +24,10 @@ USER_AGENT = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
 }
 
-PHOTO_ARTICLE_TITLE_PATTERNS = [
-    r"^\[사진\]",
-    r"^\[포토\]",
-    r"^\(포토\)",
-    r"^\[포토뉴스\]",
-    r"^\[경향포토\]",
-    r"^\[포토 종합\]",
-    r"^\[포토에세이\]"
-]
+PHOTO_ARTICLE_TITLE_PATTERNS = re.compile(
+    r"^\[사진\]|^\[포토\]|^\(포토\)|"
+    r"^\[포토뉴스\]|^\[경향포토\]|^\[포토 종합\]|^\[포토에세이\]"
+)
 
 def load_sources() -> List[Dict[str, str]]:
     """
@@ -60,8 +55,7 @@ def is_photo_article(title: str) -> bool:
     """
     기사 제목을 분석하여 포토뉴스인지 판별
     """
-    pattern = "|".join(PHOTO_ARTICLE_TITLE_PATTERNS)
-    return bool(re.match(pattern, title))
+    return bool(PHOTO_ARTICLE_TITLE_PATTERNS.match(title))
 
 
 def parse_rss_feed(url: str, source: str, category_id: int) -> List[Dict[str, Any]]:
