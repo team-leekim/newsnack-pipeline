@@ -4,6 +4,7 @@ RSS Parser
 RSS 피드를 수집하고 DB에 저장
 """
 import os
+import re
 import yaml
 import time
 import feedparser
@@ -23,6 +24,10 @@ USER_AGENT = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
 }
 
+PHOTO_ARTICLE_TITLE_PATTERNS = re.compile(
+    r"^\[사진\]|^\[포토\]|^\(포토\)|"
+    r"^\[포토뉴스\]|^\[경향포토\]|^\[포토 종합\]|^\[포토에세이\]"
+)
 
 def load_sources() -> List[Dict[str, str]]:
     """
@@ -46,6 +51,13 @@ def load_sources() -> List[Dict[str, str]]:
                 return yaml.safe_load(f)
 
 
+def is_photo_article(title: str) -> bool:
+    """
+    기사 제목을 분석하여 포토뉴스인지 판별
+    """
+    return bool(PHOTO_ARTICLE_TITLE_PATTERNS.match(title))
+
+
 def parse_rss_feed(url: str, source: str, category_id: int) -> List[Dict[str, Any]]:
     """
     RSS 피드를 파싱하여 기사 데이터 리스트로 변환 (순수 로직)
@@ -62,6 +74,11 @@ def parse_rss_feed(url: str, source: str, category_id: int) -> List[Dict[str, An
     articles = []
     
     for entry in feed.entries:
+        title = entry.get('title', '제목 없음')
+
+        if is_photo_article(title):
+            continue
+
         # 날짜 파싱 (없으면 현재 시간)
         if 'published_parsed' in entry and entry.published_parsed:
             pub_date = datetime.fromtimestamp(
@@ -70,16 +87,14 @@ def parse_rss_feed(url: str, source: str, category_id: int) -> List[Dict[str, An
             )
         else:
             pub_date = datetime.now(timezone.utc)
-        
         articles.append({
-            "title": entry.get('title', '제목 없음'),
+            "title": title,
             "content": entry.get('summary', entry.get('description', '')),
             "origin_url": entry.link,
             "source": source,
             "category_id": category_id,
             "published_at": pub_date
         })
-    
     return articles
 
 
