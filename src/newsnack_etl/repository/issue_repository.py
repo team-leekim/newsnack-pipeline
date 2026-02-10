@@ -42,7 +42,8 @@ class IssueRepository:
         # 이슈 생성
         new_issue = Issue(
             title=title,
-            category_id=category_id
+            category_id=category_id,
+            batch_time=datetime.now(timezone.utc)
         )
         self.db.add(new_issue)
         self.db.flush()  # ID 획득
