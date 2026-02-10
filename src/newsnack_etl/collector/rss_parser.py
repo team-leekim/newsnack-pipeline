@@ -24,7 +24,15 @@ USER_AGENT = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
 }
 
-PHOTO_ARTICLE_TITLE_PATTERNS = [r"^\[포토\]", r"^\[사진\]"]
+PHOTO_ARTICLE_TITLE_PATTERNS = [
+r"^[사진]",
+r"^[포토]",
+r"^(포토)",
+r"^[포토뉴스]",
+r"^[경향포토]",
+r"^[포토 종합]",
+r"^[포토에세이]"
+]
 
 def load_sources() -> List[Dict[str, str]]:
     """
