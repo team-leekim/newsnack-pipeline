@@ -83,6 +83,68 @@ def check_generation_needed(ti, **context):
     logger.info(f"Found {len(targets)} issues to process. Continuing...")
     return True
 
+def wait_for_completion(ti, **context):
+    """
+    AI 콘텐츠 생성 완료 대기 (Smart Wait)
+    - 최대 10분 대기
+    - 전수 완료 시 즉시 통과
+    - Timeout 시 3개 이상 완료면 통과, 아니면 Skip
+    """
+    target_ids = ti.xcom_pull(task_ids='select_target_issues', key='target_issues')
+    if not target_ids:
+        raise AirflowSkipException("No target issues.")
+
+    pg_hook = PostgresHook(postgres_conn_id='newsnack_db_conn')
+    
+    timeout = 600  # 10분
+    interval = 30  # 30초
+    start_time = time.time()
+    
+    while time.time() - start_time < timeout:
+        # 상태 확인 쿼리
+        placeholders = ','.join(['%s'] * len(target_ids))
+        query = f"""
+            SELECT id FROM issue 
+            WHERE id IN ({placeholders}) 
+            AND processing_status = 'COMPLETED'
+        """
+        records = pg_hook.get_records(query, parameters=tuple(target_ids))
+        completed_ids = [r[0] for r in records]
+        
+        logger.info(f"Waiting... Completed {len(completed_ids)}/{len(target_ids)}")
+        
+        # 1. 모두 완료되었으면 즉시 성공
+        if len(completed_ids) == len(target_ids):
+            logger.info("All target issues completed!")
+            ti.xcom_push(key='completed_issue_ids', value=completed_ids)
+            return True
+            
+        time.sleep(interval)
+    
+    # Timeout 발생 시 로직
+    # 다시 한 번 최종 확인
+    placeholders = ','.join(['%s'] * len(target_ids))
+    query = f"""
+        SELECT id FROM issue 
+        WHERE id IN ({placeholders}) 
+        AND processing_status = 'COMPLETED'
+    """
+    records = pg_hook.get_records(query, parameters=tuple(target_ids))
+    completed_ids = [r[0] for r in records]
+    
+    logger.info(f"Timeout reached. Final completed count: {len(completed_ids)}")
+    
+    # 2. 최소 조건(3개) 충족 시 통과
+    if len(completed_ids) >= 3:
+        logger.warning(f"Timeout but sufficient issues completed ({len(completed_ids)}). Proceeding.")
+        ti.xcom_push(key='completed_issue_ids', value=completed_ids)
+        return True
+    
+    # 3. 최소 조건 미달 시 Skip
+    else:
+        logger.error(f"Insufficient issues completed ({len(completed_ids)}). Skipping newsnack assembly.")
+        raise AirflowSkipException(f"Only {len(completed_ids)} issues completed. Skipping.")
+
 with DAG(
     'content_generation_dag',
     default_args=default_args,
@@ -107,9 +169,9 @@ with DAG(
         python_callable=check_generation_needed,
     )
     
-    # Task 3: Top 5 AI 기사 생성 요청
-    generate_top5 = SimpleHttpOperator(
-        task_id='generate_top5_articles',
+    # Task 3: AI 기사 생성 요청
+    generate_content = SimpleHttpOperator(
+        task_id='generate_content',
         http_conn_id='ai_server_api',
         endpoint='/ai-articles',
         method='POST',
@@ -119,22 +181,10 @@ with DAG(
         log_response=True,
     )
     
-    # Task 4: Top 5 생성 완료 대기 (SQL Sensor)
-    # 완료된 이슈가 하나라도 있으면 통과 (부분 완료 허용)
-    wait_top5 = SqlSensor(
-        task_id='wait_for_top5_completion',
-        conn_id='newsnack_db_conn',
-        # Top 5 중 완료된 것이 하나라도 있으면 통과
-        # 콘텐츠당 2분 이내 소요 예상
-        sql="""
-            SELECT COUNT(*) > 0 
-            FROM issue 
-            WHERE id = ANY(ARRAY[{{ task_instance.xcom_pull(task_ids='select_target_issues', key='top_5_issues') | join(',') }}])
-            AND processing_status = 'COMPLETED'
-        """,
-        poke_interval=30,  # 30초마다 체크
-        timeout=600,  # 10분 타임아웃
-        mode='poke',
+    # Task 4: 생성 완료 대기 (Smart Wait)
+    wait_completion = PythonOperator(
+        task_id='wait_for_completion',
+        python_callable=wait_for_completion,
     )
     
     # Task 5: 오늘의 뉴스낵 조립
