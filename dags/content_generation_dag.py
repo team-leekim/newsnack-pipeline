@@ -140,8 +140,8 @@ with DAG(
     'content_generation_dag',
     default_args=default_args,
     description='AI 콘텐츠 생성 및 오늘의 뉴스낵 조립',
-    # 클러스터링 30분 후 실행 (한국 시간 07:30, 17:30)
-    schedule_interval='30 22,8 * * *',  # 매일 22:30, 08:30 (UTC) = 07:30, 17:30 (KST)
+    # 클러스터링 30분 후 실행 (UTC 07:30, 17:30 = KST 08:30, 18:30)
+    schedule_interval='30 8,22 * * *',
     start_date=datetime(2026, 2, 5),
     catchup=False,
     tags=['newsnack', 'ai', 'generation'],
