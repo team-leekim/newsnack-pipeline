@@ -86,18 +86,18 @@ def check_generation_needed(ti, **context):
 def wait_for_completion(ti, **context):
     """
     AI 콘텐츠 생성 완료 대기 (Smart Wait)
-    - 최대 10분 대기
-    - 전수 완료 시 즉시 통과
-    - Timeout 시 3개 이상 완료면 통과, 아니면 Skip
     """
     target_ids = ti.xcom_pull(task_ids='select_target_issues', key='target_issues')
     if not target_ids:
         raise AirflowSkipException("No target issues.")
 
+    # 설정값 로드
+    timeout = int(Variable.get("CONTENT_GEN_TIMEOUT", default_var=600))
+    interval = int(Variable.get("CONTENT_GEN_CHECK_INTERVAL", default_var=30))
+    min_completion_count = int(Variable.get("CONTENT_GEN_MIN_COMPLETION", default_var=3))
+
     pg_hook = PostgresHook(postgres_conn_id='newsnack_db_conn')
     
-    timeout = 600  # 10분
-    interval = 30  # 30초
     start_time = time.time()
     
     while time.time() - start_time < timeout:
