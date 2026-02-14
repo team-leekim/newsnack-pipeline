@@ -39,19 +39,21 @@ def select_target_issues(ti, **context):
     # Airflow Variables에서 설정값 가져오기
     top_count = int(Variable.get("TOP_NEWSNACK_COUNT", default_var=5))
     extra_count = int(Variable.get("EXTRA_FEED_COUNT", default_var=5))
+    lookback_hours = int(Variable.get("DAG_GENERATION_LOOKBACK_HOURS", default_var=24))
     
-    logger.info(f"Selecting issues: Top {top_count}, Extra {extra_count}")
+    logger.info(f"Selecting issues: Top {top_count}, Extra {extra_count}, Lookback {lookback_hours}h")
     
     # PostgresHook을 사용하여 DB 연결
     pg_hook = PostgresHook(postgres_conn_id='newsnack_db_conn')
     
     # 미처리 이슈를 화제성(기사 개수) 순으로 조회
     # 기사 개수가 많을수록 화제성이 높다고 판단
-    query = """
+    query = f"""
         SELECT i.id, COUNT(ra.id) as article_count
         FROM issue i
         LEFT JOIN raw_article ra ON ra.issue_id = i.id
         WHERE i.processing_status = 'PENDING'
+        AND i.batch_time >= NOW() - INTERVAL '{lookback_hours} HOURS'
         GROUP BY i.id
         ORDER BY article_count DESC, i.batch_time DESC
         LIMIT %s
