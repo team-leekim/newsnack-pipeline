@@ -6,11 +6,11 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.http.operators.http import SimpleHttpOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.sensors.sql import SqlSensor
 from airflow.models import Variable
 from airflow.exceptions import AirflowSkipException
 from datetime import datetime, timedelta
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -32,22 +32,18 @@ async_response_check = lambda response: response.status_code == 202
 
 def select_target_issues(ti, **context):
     """
-    미처리 이슈 중 화제성(기사 개수) 높은 순으로 Top 5와 Extra N 선정
-    Top 5: 오늘의 뉴스낵용
-    Extra N: 추가 피드용
+    미처리 이슈 중 화제성(기사 개수) 높은 순으로 Top N 선정
     """
     # Airflow Variables에서 설정값 가져오기
-    top_count = int(Variable.get("TOP_NEWSNACK_COUNT", default_var=5))
-    extra_count = int(Variable.get("EXTRA_FEED_COUNT", default_var=5))
+    target_count = int(Variable.get("TOP_NEWSNACK_COUNT", default_var=5))
     lookback_hours = int(Variable.get("DAG_GENERATION_LOOKBACK_HOURS", default_var=24))
     
-    logger.info(f"Selecting issues: Top {top_count}, Extra {extra_count}, Lookback {lookback_hours}h")
+    logger.info(f"Selecting target issues: Top {target_count}, Lookback {lookback_hours}h")
     
     # PostgresHook을 사용하여 DB 연결
     pg_hook = PostgresHook(postgres_conn_id='newsnack_db_conn')
     
     # 미처리 이슈를 화제성(기사 개수) 순으로 조회
-    # 기사 개수가 많을수록 화제성이 높다고 판단
     query = f"""
         SELECT i.id, COUNT(ra.id) as article_count
         FROM issue i
@@ -59,43 +55,32 @@ def select_target_issues(ti, **context):
         LIMIT %s
     """
     
-    results = pg_hook.get_records(query, parameters=(top_count + extra_count,))
+    results = pg_hook.get_records(query, parameters=(target_count,))
     
     if not results:
-        logger.warning("No unprocessed issues found. Skipping content generation.")
-        # 빈 리스트 반환
-        ti.xcom_push(key='top_5_issues', value=[])
-        ti.xcom_push(key='extra_issues', value=[])
-        return {"top_5": [], "extra": [], "total": 0}
+        logger.warning("No unprocessed issues found.")
+        ti.xcom_push(key='target_issues', value=[])
+        return []
     
     # issue_id만 추출
-    issue_ids = [row[0] for row in results]
+    target_ids = [row[0] for row in results]
     
-    top_5 = issue_ids[:top_count]
-    extra_n = issue_ids[top_count:]
-    
-    logger.info(f"Selected {len(top_5)} top issues and {len(extra_n)} extra issues (sorted by article count)")
-    logger.info(f"Top 5 IDs: {top_5}")
-    logger.info(f"Extra IDs: {extra_n}")
+    logger.info(f"Selected {len(target_ids)} issues: {target_ids}")
     
     # XCom에 저장 (다음 태스크에서 사용)
-    ti.xcom_push(key='top_5_issues', value=top_5)
-    ti.xcom_push(key='extra_issues', value=extra_n)
+    ti.xcom_push(key='target_issues', value=target_ids)
     
-    return {"top_5": top_5, "extra": extra_n, "total": len(issue_ids)}
+    return target_ids
 
 def check_generation_needed(ti, **context):
     """생성할 이슈가 있는지 확인하여 후속 태스크 스킵 여부 결정"""
-    top_5 = ti.xcom_pull(
-        task_ids='select_target_issues', 
-        key='top_5_issues'
-    )
+    targets = ti.xcom_pull(task_ids='select_target_issues', key='target_issues')
     
-    if not top_5:
+    if not targets:
         logger.info("No issues to generate. This run will be skipped.")
         raise AirflowSkipException("No unprocessed issues found. Gracefully skipping DAG run.")
     
-    logger.info(f"Found {len(top_5)} issues to process. Continuing...")
+    logger.info(f"Found {len(targets)} issues to process. Continuing...")
     return True
 
 with DAG(
