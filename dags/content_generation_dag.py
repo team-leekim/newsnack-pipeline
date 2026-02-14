@@ -99,6 +99,7 @@ def wait_for_completion(ti, **context):
     pg_hook = PostgresHook(postgres_conn_id='newsnack_db_conn')
     
     start_time = time.time()
+    completed_ids = []
     
     while time.time() - start_time < timeout:
         # 상태 확인 쿼리
@@ -121,28 +122,18 @@ def wait_for_completion(ti, **context):
             
         time.sleep(interval)
     
-    # Timeout 발생 시 로직
-    # 다시 한 번 최종 확인
-    placeholders = ','.join(['%s'] * len(target_ids))
-    query = f"""
-        SELECT id FROM issue 
-        WHERE id IN ({placeholders}) 
-        AND processing_status = 'COMPLETED'
-    """
-    records = pg_hook.get_records(query, parameters=tuple(target_ids))
-    completed_ids = [r[0] for r in records]
-    
+    # Timeout 발생 시 로직 (마지막 조회 결과 사용)
     logger.info(f"Timeout reached. Final completed count: {len(completed_ids)}")
     
-    # 2. 최소 조건(3개) 충족 시 통과
-    if len(completed_ids) >= 3:
-        logger.warning(f"Timeout but sufficient issues completed ({len(completed_ids)}). Proceeding.")
+    # 2. 최소 조건 충족 시 통과
+    if len(completed_ids) >= min_completion_count:
+        logger.warning(f"Timeout but sufficient issues completed ({len(completed_ids)} >= {min_completion_count}). Proceeding.")
         ti.xcom_push(key='completed_issue_ids', value=completed_ids)
         return True
     
     # 3. 최소 조건 미달 시 Skip
     else:
-        logger.error(f"Insufficient issues completed ({len(completed_ids)}). Skipping newsnack assembly.")
+        logger.error(f"Insufficient issues completed ({len(completed_ids)} < {min_completion_count}). Skipping newsnack assembly.")
         raise AirflowSkipException(f"Only {len(completed_ids)} issues completed. Skipping.")
 
 with DAG(
