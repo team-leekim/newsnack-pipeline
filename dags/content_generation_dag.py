@@ -163,23 +163,5 @@ with DAG(
         log_response=True,
     )
     
-    # Task 6: Extra 기사 생성 (Top 5와 병렬 실행 가능)
-    generate_extra = SimpleHttpOperator(
-        task_id='generate_extra_articles',
-        http_conn_id='ai_server_api',
-        endpoint='/ai-articles',
-        method='POST',
-        data='{"issue_ids": {{ task_instance.xcom_pull(task_ids="select_target_issues", key="extra_issues") | tojson }} }',
-        headers=common_api_headers,
-        response_check=async_response_check,
-        log_response=True,
-    )
-    
-    # Task 의존성 정의
-    # 1. 이슈 선정
-    # 2. 생성 필요 여부 체크
-    # 3. Top 5와 Extra 생성 요청 (병렬)
-    # 4. Top 5 완료 대기
-    # 5. 뉴스낵 조립
-    select_issues >> check_needed >> [generate_top5, generate_extra]
-    generate_top5 >> wait_top5 >> assemble_newsnack
+    # Task 의존성 정의 (순차 실행)
+    select_issues >> check_needed >> generate_content >> wait_completion >> assemble_newsnack
