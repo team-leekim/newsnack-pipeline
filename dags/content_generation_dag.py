@@ -44,18 +44,18 @@ def select_target_issues(ti, **context):
     pg_hook = PostgresHook(postgres_conn_id='newsnack_db_conn')
     
     # 미처리 이슈를 화제성(기사 개수) 순으로 조회
-    query = f"""
+    query = """
         SELECT i.id, COUNT(ra.id) as article_count
         FROM issue i
         LEFT JOIN raw_article ra ON ra.issue_id = i.id
         WHERE i.processing_status = 'PENDING'
-        AND i.batch_time >= NOW() - INTERVAL '{lookback_hours} HOURS'
+        AND i.batch_time >= NOW() - INTERVAL %s
         GROUP BY i.id
         ORDER BY article_count DESC, i.batch_time DESC
         LIMIT %s
     """
     
-    results = pg_hook.get_records(query, parameters=(target_count,))
+    results = pg_hook.get_records(query, parameters=(f'{lookback_hours} HOURS', target_count))
     
     if not results:
         logger.warning("No unprocessed issues found.")
