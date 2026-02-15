@@ -2,7 +2,7 @@
 
 Apache Airflow 기반 뉴스 데이터 ETL 및 오케스트레이션 파이프라인입니다.
 
-RSS 피드에서 뉴스를 수집하고, 유사 기사들을 군집화하여 이슈를 생성하며, AI 서비스(newsnack-ai)를 통해 뉴스데스크와 웹툰 콘텐츠를 자동으로 생성합니다. 모든 워크플로우는 Apache Airflow DAG로 정의되며 일정에 따라 자동으로 실행됩니다. 생성된 콘텐츠는 PostgreSQL 데이터베이스에 저장되며, newsnack-backend API 서버에서 조회하여 사용자에게 제공합니다.
+RSS 피드에서 뉴스를 수집하고, 유사 기사들을 군집화하여 이슈를 생성하며, AI 엔진(`newsnack-ai`)을 통해 뉴스데스크와 웹툰 콘텐츠를 자동으로 생성합니다. 모든 워크플로우는 Apache Airflow DAG로 정의되며 일정에 따라 자동으로 실행됩니다. 생성된 콘텐츠는 PostgreSQL 데이터베이스에 저장되며, Core API 서버(`newsnack-backend`)에서 조회하여 사용자에게 제공합니다.
 
 ## 시스템 아키텍처
 
@@ -104,8 +104,8 @@ python -m newsnack_etl.processor.clusterer
 | DAG | 스케줄 | 역할 |
 |-----|--------|------|
 | `news_collection_dag` | `*/30 * * * *` | RSS 피드에서 뉴스 수집 |
-| `issue_clustering_dag` | `0 22,8 * * *` | 유사 기사 군집화 |
-| `content_generation_dag` | `30 22,8 * * *` | AI 콘텐츠 생성 |
+| `issue_clustering_dag` | `0 8,22 * * *` | 유사 기사 군집화 |
+| `content_generation_dag` | `30 8,22 * * *` | AI 콘텐츠 생성 |
 
 ## Import 경로
 
