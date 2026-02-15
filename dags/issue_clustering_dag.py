@@ -33,8 +33,7 @@ with DAG(
     'issue_clustering_dag',
     default_args=default_args,
     description='매일 2회(07:00, 17:00 KST) 이슈 집계',
-    # 한국 시간 07:00, 17:00 = UTC 22:00(전날), 08:00
-    schedule_interval='0 22,8 * * *',  # 매일 22:00, 08:00 (UTC) = 07:00, 17:00 (KST)
+    schedule_interval='0 8,22 * * *',
     start_date=datetime(2026, 2, 5),
     catchup=False,
     tags=['newsnack', 'clustering', 'issue'],

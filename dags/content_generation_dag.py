@@ -139,8 +139,8 @@ def wait_for_completion(ti, **context):
 with DAG(
     'content_generation_dag',
     default_args=default_args,
-    description='AI 콘텐츠 생성 및 오늘의 뉴스낵 조립',
-    # 클러스터링 30분 후 실행 (UTC 07:30, 17:30 = KST 08:30, 18:30)
+    description='AI 기사 및 오늘의 뉴스낵 생성',
+    # 클러스터링 30분 후 실행
     schedule_interval='30 8,22 * * *',
     start_date=datetime(2026, 2, 5),
     catchup=False,
@@ -178,7 +178,7 @@ with DAG(
         python_callable=wait_for_completion,
     )
     
-    # Task 5: 오늘의 뉴스낵 조립
+    # Task 5: 오늘의 뉴스낵 생성 요청
     assemble_newsnack = SimpleHttpOperator(
         task_id='assemble_today_newsnack',
         http_conn_id='ai_server_api',
