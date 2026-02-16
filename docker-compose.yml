@@ -19,9 +19,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 800M
+          memory: 1.2G
         reservations:
-          memory: 550M
+          memory: 800M
 
   airflow-scheduler:
     <<: *airflow-common
