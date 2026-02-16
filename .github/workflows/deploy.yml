@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - hotfix/*
     paths:
       - 'dags/**'
       - 'src/**'
@@ -16,6 +15,7 @@ on:
       - 'docker-compose.yml'
       - '.dockerignore'
       - '.github/workflows/deploy.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
