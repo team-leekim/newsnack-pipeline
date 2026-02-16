@@ -16,7 +16,19 @@ services:
     command: webserver
     ports:
       - "8081:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+        reservations:
+          memory: 550M
 
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
+    deploy:
+      resources:
+        limits:
+          memory: 2.2G
+        reservations:
+          memory: 700M
