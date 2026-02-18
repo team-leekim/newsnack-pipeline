@@ -9,6 +9,8 @@ x-airflow-common: &airflow-common
     - ./src:/opt/airflow/src
   user: "${AIRFLOW_UID:-50000}:0"
   restart: always
+  networks:
+    - newsnack-internal
 
 services:
   airflow-webserver:
@@ -32,3 +34,7 @@ services:
           memory: 2.2G
         reservations:
           memory: 700M
+
+networks:
+  newsnack-internal:
+    external: true
