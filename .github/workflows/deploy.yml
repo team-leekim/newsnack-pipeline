@@ -22,6 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: prod
+    env:
+      EC2_USERNAME: ec2-user
+      TARGET_DIR: /home/ec2-user/newsnack-pipeline
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -71,76 +74,49 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
       
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Deploy and Verify
+        uses: appleboy/ssh-action@v1.2.4
+        env:
+          CHANGED: ${{ steps.check_requirements.outputs.changed }}
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
-      
-      - name: Add EC2 to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-      
-      - name: Deploy DAG files
-        run: |
-          echo "📦 Deploying DAG files..."
-          # dags/ 디렉토리 배포
-          rsync -avz --delete \
-            --exclude='__pycache__' \
-            --exclude='*.pyc' \
-            --exclude='.DS_Store' \
-            dags/ ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-pipeline/dags/
-          
-          echo "📦 Deploying source code..."
-          # src/ 디렉토리 배포
-          rsync -avz --delete \
-            --no-times --no-perms --no-owner --no-group \
-            --exclude='__pycache__' \
-            --exclude='*.pyc' \
-            --exclude='.DS_Store' \
-            src/ ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-pipeline/src/
-      
-      - name: Deploy package files if changed
-        if: steps.check_requirements.outputs.changed == 'true'
-        run: |
-          echo "📦 Deploying package configuration files..."
-          scp requirements.txt setup.py pyproject.toml MANIFEST.in Dockerfile .dockerignore docker-compose.yml ec2-user@${{ secrets.EC2_HOST }}:~/newsnack-pipeline/
-      
-      - name: Rebuild and restart Airflow containers if package changed
-        if: steps.check_requirements.outputs.changed == 'true'
-        run: |
-          echo "🔄 Rebuilding Airflow image (package configuration changed)..."
-          ssh ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ env.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: CHANGED, TARGET_DIR
+          script: |
             set -e
-            cd ~/newsnack-pipeline
-            docker build -t newsnack-pipeline:latest .
-            docker compose down
-            docker compose up -d --no-build
+            cd $TARGET_DIR
+            
+            # 1. Pull latest code
+            echo "📥 Pulling latest changes..."
+            git fetch origin main
+            git reset --hard origin/main
+            
+            # 2. Update containers based on changes
+            if [ "$CHANGED" == "true" ]; then
+              echo "🔄 Configuration changed. Rebuilding and recreating containers..."
+              docker compose down
+              docker compose up -d --build
+            else
+              echo "✅ Only code changed. Restarting services to apply changes..."
+              docker compose up -d
+            fi
+
+            # 3. Verify deployment
+            echo "🔍 Verifying deployment..."
             sleep 15
             docker compose ps
             docker compose exec -T airflow-scheduler pip list | grep newsnack-etl || true
-          EOF
-          echo "✅ Image rebuilt and containers restarted successfully"
-      
-      - name: Verify deployment
-        run: |
-          echo "🔍 Verifying deployment..."
-          ssh ec2-user@${{ secrets.EC2_HOST }} '
-            echo "📁 Deployed DAG files:"
-            ls -lh ~/newsnack-pipeline/dags/*.py 2>/dev/null || echo "No DAG files found"
+            
+            echo "📍 Current Commit:"
+            git log -1 --oneline
             
             echo ""
-            echo "📁 Deployed source files:"
-            find ~/newsnack-pipeline/src -name "*.py" -type f | head -10
+            echo "📊 Airflow Containers Status:"
+            docker compose ps
             
-            echo ""
-            echo "📊 Airflow Scheduler status:"
-            docker compose -f ~/newsnack-pipeline/docker-compose.yml ps airflow-scheduler
-            
-            echo ""
-            echo "📋 Recent DAG processing logs:"
-            docker compose -f ~/newsnack-pipeline/docker-compose.yml logs --tail=30 airflow-scheduler | grep -E "DAG|Processing" || echo "No DAG logs yet"
-          '
+            # Prune unused images
+            docker image prune -f
       
       - name: Notify deployment
         if: success()
