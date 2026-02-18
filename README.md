@@ -93,9 +93,12 @@ python -m newsnack_etl.processor.clusterer
 코드를 `main` 브랜치에 푸시하면 GitHub Actions 워크플로우가 자동으로 실행됩니다:
 
 1. 코드 푸시 → `.github/workflows/deploy.yml` 트리거
-2. Docker 이미지 빌드: `newsnack-pipeline:latest`
-3. EC2 인스턴스에 자동 배포
-4. 컨테이너 재시작
+2. DAG 문법 검증
+3. 변경 파일 감지 (패키지 설정 변경 여부 확인)
+4. EC2에서 `git pull`로 최신 코드 동기화
+5. 변경 유형에 따라 컨테이너 처리:
+   - 패키지 설정 변경 → 이미지 재빌드 후 재시작
+   - 코드만 변경 → 재빌드 없이 컨테이너 재생성
 
 **주의**: EC2에서 직접 명령어를 실행할 필요가 없습니다. PR을 머지하기만 하면 자동으로 배포됩니다.
 
