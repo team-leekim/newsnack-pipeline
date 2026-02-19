@@ -80,12 +80,19 @@ def select_target_issues(ti, **context):
     return pending_ids
 
 def check_generation_needed(ti, **context):
-    """생성할 이슈가 있는지 확인하여 후속 태스크 스킵 여부 결정"""
+    """생성할 이슈 혹은 이미 생성된 이슈가 있는지 확인하여 후속 태스크 스킵 여부 결정"""
     targets = ti.xcom_pull(task_ids='select_target_issues', key='target_issues')
+    all_top_ids = ti.xcom_pull(task_ids='select_target_issues', key='all_top_issues')
     
+    # 전체 Top N 이슈 자체가 없으면 스킵 (lookback 기간 내 이슈 없음)
+    if not all_top_ids:
+        logger.info("No issues found in lookback period. Gracefully skipping DAG run.")
+        raise AirflowSkipException("No issues found.")
+        
+    # 생성할 이슈는 없지만 이미 완료된 이슈는 있는 경우 -> 생성 단계 건너뛰고 조립 단계로 진행
     if not targets:
-        logger.info("No issues to generate. This run will be skipped.")
-        raise AirflowSkipException("No unprocessed issues found. Gracefully skipping DAG run.")
+        logger.info(f"All top {len(all_top_ids)} issues are already completed. Checking if assembly is possible.")
+        return True
     
     logger.info(f"Found {len(targets)} issues to process. Continuing...")
     return True
@@ -93,10 +100,19 @@ def check_generation_needed(ti, **context):
 def wait_for_completion(ti, **context):
     """
     AI 콘텐츠 생성 완료 대기 (Smart Wait)
+    새로 요청한 이슈들의 완료를 기다린 후, 기존 완료된 이슈와 합쳐서 반환
     """
-    target_ids = ti.xcom_pull(task_ids='select_target_issues', key='target_issues')
+    target_ids = ti.xcom_pull(task_ids='select_target_issues', key='target_issues')    # 새로 요청한 것 (PENDING)
+    all_top_ids = ti.xcom_pull(task_ids='select_target_issues', key='all_top_issues') # 전체 Top N (PENDING + COMPLETED)
+    
+    if not all_top_ids:
+        raise AirflowSkipException("No top issues found.")
+
+    # 새로 생성할 것이 없으면 바로 전체 리스트 반환
     if not target_ids:
-        raise AirflowSkipException("No target issues.")
+        logger.info("No generated issues to wait for. Returning all top issues.")
+        ti.xcom_push(key='completed_issue_ids', value=all_top_ids)
+        return True
 
     # 설정값 로드
     timeout = int(Variable.get("CONTENT_GEN_TIMEOUT", default_var=600))
@@ -106,42 +122,43 @@ def wait_for_completion(ti, **context):
     pg_hook = PostgresHook(postgres_conn_id='newsnack_db_conn')
     
     start_time = time.time()
-    completed_ids = []
     
     while time.time() - start_time < timeout:
-        # 상태 확인 쿼리
-        placeholders = ','.join(['%s'] * len(target_ids))
+        # 전체 Top N 이슈의 상태 확인 (기존 완료 + 새로 완료 모두 포함)
+        placeholders = ','.join(['%s'] * len(all_top_ids))
         query = f"""
             SELECT id FROM issue 
             WHERE id IN ({placeholders}) 
             AND processing_status = 'COMPLETED'
         """
-        records = pg_hook.get_records(query, parameters=tuple(target_ids))
-        completed_ids = [r[0] for r in records]
+        records = pg_hook.get_records(query, parameters=tuple(all_top_ids))
+        current_completed_ids = [r[0] for r in records]
         
-        logger.info(f"Waiting... Completed {len(completed_ids)}/{len(target_ids)}")
+        logger.info(f"Waiting... Total Completed {len(current_completed_ids)}/{len(all_top_ids)} (Targets: {len(target_ids)})")
         
-        # 1. 모두 완료되었으면 즉시 성공
-        if len(completed_ids) == len(target_ids):
-            logger.info("All target issues completed!")
-            ti.xcom_push(key='completed_issue_ids', value=completed_ids)
+        # 1. 대상 이슈가 모두 완료되었으면 성공 (혹은 전체 Top N이 모두 완료)
+        if len(current_completed_ids) == len(all_top_ids):
+            logger.info("All top issues are completed!")
+            ti.xcom_push(key='completed_issue_ids', value=current_completed_ids)
             return True
             
         time.sleep(interval)
     
-    # Timeout 발생 시 로직 (마지막 조회 결과 사용)
-    logger.info(f"Timeout reached. Final completed count: {len(completed_ids)}")
+    # Timeout 발생 시 로직
+    # 마지막으로 조회된 완료 목록 사용
+    logger.info(f"Timeout reached. Final completed count: {len(current_completed_ids)}")
     
     # 2. 최소 조건 충족 시 통과
-    if len(completed_ids) >= min_completion_count:
-        logger.warning(f"Timeout but sufficient issues completed ({len(completed_ids)} >= {min_completion_count}). Proceeding.")
-        ti.xcom_push(key='completed_issue_ids', value=completed_ids)
+    # 기준: 전체 Top N 중 완료된 개수가 min_completion_count 이상인지
+    if len(current_completed_ids) >= min_completion_count:
+        logger.warning(f"Timeout but sufficient issues completed ({len(current_completed_ids)} >= {min_completion_count}). Proceeding.")
+        ti.xcom_push(key='completed_issue_ids', value=current_completed_ids)
         return True
     
     # 3. 최소 조건 미달 시 Skip
     else:
-        logger.error(f"Insufficient issues completed ({len(completed_ids)} < {min_completion_count}). Skipping newsnack assembly.")
-        raise AirflowSkipException(f"Only {len(completed_ids)} issues completed. Skipping.")
+        logger.error(f"Insufficient issues completed ({len(current_completed_ids)} < {min_completion_count}). Skipping newsnack assembly.")
+        raise AirflowSkipException(f"Only {len(current_completed_ids)} issues completed. Skipping.")
 
 with DAG(
     'content_generation_dag',
