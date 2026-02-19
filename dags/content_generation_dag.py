@@ -30,6 +30,10 @@ common_api_headers = {
 
 async_response_check = lambda response: response.status_code == 202
 
+# 이슈 상태 상수
+STATUS_PENDING = 'PENDING'
+STATUS_COMPLETED = 'COMPLETED'
+
 def select_target_issues(ti, **context):
     """
     화제성(기사 개수) 높은 순으로 Top N 선정 (상태 무관)
@@ -67,7 +71,7 @@ def select_target_issues(ti, **context):
     all_top_ids = [row[0] for row in results]
     
     # 그 중 PENDING 상태인 이슈 ID (생성 요청용)
-    pending_ids = [row[0] for row in results if row[1] == 'PENDING']
+    pending_ids = [row[0] for row in results if row[1] == STATUS_PENDING]
     
     logger.info(f"Top {target_count} issues selected: {all_top_ids}")
     logger.info(f"Already completed: {set(all_top_ids) - set(pending_ids)}")
@@ -131,7 +135,7 @@ def wait_for_completion(ti, **context):
         query = f"""
             SELECT id FROM issue 
             WHERE id IN ({placeholders}) 
-            AND processing_status = 'COMPLETED'
+            AND processing_status = '{STATUS_COMPLETED}'
         """
         records = pg_hook.get_records(query, parameters=tuple(all_top_ids))
         current_completed_ids = [r[0] for r in records]
