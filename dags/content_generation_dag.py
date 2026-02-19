@@ -32,7 +32,8 @@ async_response_check = lambda response: response.status_code == 202
 
 def select_target_issues(ti, **context):
     """
-    미처리 이슈 중 화제성(기사 개수) 높은 순으로 Top N 선정
+    화제성(기사 개수) 높은 순으로 Top N 선정 (상태 무관)
+    이미 생성된 이슈는 제외하고 미처리된 이슈만 선별하여 반환
     """
     # Airflow Variables에서 설정값 가져오기
     target_count = int(Variable.get("TOP_NEWSNACK_COUNT", default_var=5))
@@ -43,14 +44,13 @@ def select_target_issues(ti, **context):
     # PostgresHook을 사용하여 DB 연결
     pg_hook = PostgresHook(postgres_conn_id='newsnack_db_conn')
     
-    # 미처리 이슈를 화제성(기사 개수) 순으로 조회
+    # 상태 무관하게 화제성 상위 N개 조회
     query = """
-        SELECT i.id, COUNT(ra.id) as article_count
+        SELECT i.id, i.processing_status, COUNT(ra.id) as article_count
         FROM issue i
         LEFT JOIN raw_article ra ON ra.issue_id = i.id
-        WHERE i.processing_status = 'PENDING'
-        AND i.batch_time >= NOW() - INTERVAL %s
-        GROUP BY i.id
+        WHERE i.batch_time >= NOW() - INTERVAL %s
+        GROUP BY i.id, i.processing_status
         ORDER BY article_count DESC, i.batch_time DESC
         LIMIT %s
     """
@@ -58,19 +58,26 @@ def select_target_issues(ti, **context):
     results = pg_hook.get_records(query, parameters=(f'{lookback_hours} HOURS', target_count))
     
     if not results:
-        logger.warning("No unprocessed issues found.")
+        logger.warning(f"No issues found in the last {lookback_hours} hours.")
         ti.xcom_push(key='target_issues', value=[])
+        ti.xcom_push(key='all_top_issues', value=[])
         return []
     
-    # issue_id만 추출
-    target_ids = [row[0] for row in results]
+    # 전체 Top N 이슈 ID (조립용)
+    all_top_ids = [row[0] for row in results]
     
-    logger.info(f"Selected {len(target_ids)} issues: {target_ids}")
+    # 그 중 PENDING 상태인 이슈 ID (생성 요청용)
+    pending_ids = [row[0] for row in results if row[1] == 'PENDING']
     
-    # XCom에 저장 (다음 태스크에서 사용)
-    ti.xcom_push(key='target_issues', value=target_ids)
+    logger.info(f"Top {target_count} issues selected: {all_top_ids}")
+    logger.info(f"Already completed: {set(all_top_ids) - set(pending_ids)}")
+    logger.info(f"Issues to generate (PENDING): {pending_ids}")
     
-    return target_ids
+    # XCom에 두 가지 리스트 모두 저장
+    ti.xcom_push(key='target_issues', value=pending_ids)      # Task 3에서 사용
+    ti.xcom_push(key='all_top_issues', value=all_top_ids)     # Task 5에서 사용 (Wait Task 통해 전달 예정)
+    
+    return pending_ids
 
 def check_generation_needed(ti, **context):
     """생성할 이슈가 있는지 확인하여 후속 태스크 스킵 여부 결정"""
