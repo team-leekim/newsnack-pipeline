@@ -11,6 +11,7 @@ from airflow.exceptions import AirflowSkipException
 from datetime import datetime, timedelta
 import logging
 import time
+from newsnack_etl.database.models import IssueStatusEnum
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +31,6 @@ common_api_headers = {
 
 async_response_check = lambda response: response.status_code == 202
 
-# 이슈 상태 상수
-STATUS_PENDING = 'PENDING'
-STATUS_COMPLETED = 'COMPLETED'
 
 def select_target_issues(ti, **context):
     """
@@ -70,18 +68,19 @@ def select_target_issues(ti, **context):
     # 전체 Top N 이슈 ID (조립용)
     all_top_ids = [row[0] for row in results]
     
-    # 그 중 PENDING 상태인 이슈 ID (생성 요청용)
-    pending_ids = [row[0] for row in results if row[1] == STATUS_PENDING]
+    # 그 중 PENDING 또는 FAILED 상태인 이슈 ID (생성 요청용 - 재시도 포함)
+    target_ids = [row[0] for row in results if row[1] in (IssueStatusEnum.PENDING.value, IssueStatusEnum.FAILED.value)]
     
     logger.info(f"Top {target_count} issues selected: {all_top_ids}")
-    logger.info(f"Already completed: {set(all_top_ids) - set(pending_ids)}")
-    logger.info(f"Issues to generate (PENDING): {pending_ids}")
+    # 이미 완료된 것들 (전체 집합 - 생성 대상 집합)
+    logger.info(f"Already completed: {set(all_top_ids) - set(target_ids)}")
+    logger.info(f"Issues to generate (PENDING/FAILED): {target_ids}")
     
     # XCom에 두 가지 리스트 모두 저장
-    ti.xcom_push(key='target_issues', value=pending_ids)      # Task 3에서 사용
+    ti.xcom_push(key='target_issues', value=target_ids)      # Task 3에서 사용
     ti.xcom_push(key='all_top_issues', value=all_top_ids)     # Task 5에서 사용 (Wait Task 통해 전달 예정)
     
-    return pending_ids
+    return target_ids
 
 def check_generation_needed(ti, **context):
     """생성할 이슈 혹은 이미 생성된 이슈가 있는지 확인하여 후속 태스크 스킵 여부 결정"""
@@ -135,7 +134,7 @@ def wait_for_completion(ti, **context):
         query = f"""
             SELECT id FROM issue 
             WHERE id IN ({placeholders}) 
-            AND processing_status = '{STATUS_COMPLETED}'
+            AND processing_status = '{IssueStatusEnum.COMPLETED.value}'
         """
         records = pg_hook.get_records(query, parameters=tuple(all_top_ids))
         current_completed_ids = [r[0] for r in records]
