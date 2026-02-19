@@ -11,6 +11,7 @@ from airflow.exceptions import AirflowSkipException
 from datetime import datetime, timedelta
 import logging
 import time
+from newsnack_etl.database.models import IssueStatusEnum
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +31,6 @@ common_api_headers = {
 
 async_response_check = lambda response: response.status_code == 202
 
-# 이슈 상태 상수
-STATUS_PENDING = 'PENDING'
-STATUS_COMPLETED = 'COMPLETED'
-STATUS_FAILED = 'FAILED'
 
 def select_target_issues(ti, **context):
     """
@@ -72,10 +69,10 @@ def select_target_issues(ti, **context):
     all_top_ids = [row[0] for row in results]
     
     # 그 중 PENDING 또는 FAILED 상태인 이슈 ID (생성 요청용 - 재시도 포함)
-    target_ids = [row[0] for row in results if row[1] in (STATUS_PENDING, STATUS_FAILED)]
+    target_ids = [row[0] for row in results if row[1] in (IssueStatusEnum.PENDING.value, IssueStatusEnum.FAILED.value)]
     
     logger.info(f"Top {target_count} issues selected: {all_top_ids}")
-    # 이미 완료된 것들 (전체 - 생성 대상)
+    # 이미 완료된 것들 (전체 집합 - 생성 대상 집합)
     logger.info(f"Already completed: {set(all_top_ids) - set(target_ids)}")
     logger.info(f"Issues to generate (PENDING/FAILED): {target_ids}")
     
@@ -137,7 +134,7 @@ def wait_for_completion(ti, **context):
         query = f"""
             SELECT id FROM issue 
             WHERE id IN ({placeholders}) 
-            AND processing_status = '{STATUS_COMPLETED}'
+            AND processing_status = '{IssueStatusEnum.COMPLETED.value}'
         """
         records = pg_hook.get_records(query, parameters=tuple(all_top_ids))
         current_completed_ids = [r[0] for r in records]
