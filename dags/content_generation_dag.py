@@ -123,6 +123,8 @@ def wait_for_completion(ti, **context):
     
     start_time = time.time()
     
+    current_completed_ids = []
+    
     while time.time() - start_time < timeout:
         # 전체 Top N 이슈의 상태 확인 (기존 완료 + 새로 완료 모두 포함)
         placeholders = ','.join(['%s'] * len(all_top_ids))
