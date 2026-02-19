@@ -197,12 +197,14 @@ with DAG(
     )
     
     # Task 4: 생성 완료 대기 (Smart Wait)
+    # 새로 요청한 이슈 뿐만 아니라, 이미 완료된 이슈까지 포함하여 대기
     wait_completion = PythonOperator(
         task_id='wait_for_completion',
         python_callable=wait_for_completion,
     )
     
     # Task 5: 오늘의 뉴스낵 생성 요청
+    # 전체 Top N 이슈(신규 완료 + 기존 완료)를 사용하여 조립 요청
     assemble_newsnack = SimpleHttpOperator(
         task_id='assemble_today_newsnack',
         http_conn_id='ai_server_api',
