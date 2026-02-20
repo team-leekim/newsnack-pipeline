@@ -62,7 +62,7 @@ newsnack-pipeline/
 │       └── models.py
 ├── docker-compose.yml
 ├── Dockerfile
-├── setup.py
+├── pyproject.toml
 └── requirements.txt
 ```
 
@@ -101,6 +101,35 @@ python -m newsnack_etl.processor.clusterer
    - 코드만 변경 → 재빌드 없이 컨테이너 재생성
 
 **주의**: EC2에서 직접 명령어를 실행할 필요가 없습니다. PR을 머지하기만 하면 자동으로 배포됩니다.
+
+## 의존성 관리
+
+의존성의 성격에 따라 관리 파일이 분리되어 있습니다.
+
+| 파일 | 책임 | 예시 |
+|------|------|------|
+| `pyproject.toml` | `newsnack_etl` 패키지 의존성 | `feedparser`, `scikit-learn`, `psycopg2-binary` |
+| `requirements.txt` | Airflow 환경 의존성 (Provider) | `apache-airflow-providers-postgres` |
+
+### 새 패키지 추가 시
+
+**ETL 코드(`src/`) 내부에서 사용하는 패키지**
+→ `pyproject.toml`의 `dependencies`에 추가
+
+**Airflow Provider 추가** (새로운 Operator/Hook 사용 시)
+→ `requirements.txt`에 추가
+
+### 로컬 개발 환경 구성
+
+```bash
+# pip install -e . 하나로 newsnack_etl과 모든 의존성이 설치됩니다
+pip install -e .
+
+# requirements.txt(Airflow Provider)는 로컬 개발에 필요하지 않습니다
+```
+
+> **버전 관리**: `feedparser`, `scikit-learn`, `numpy`처럼 Airflow가 사용하지 않는 패키지는 버전을 고정합니다.
+> `SQLAlchemy`, `psycopg2-binary`, `requests`처럼 Airflow와 공유되는 패키지는 버전을 고정하지 않으며, Airflow constraint 파일이 호환 버전을 결정합니다.
 
 ## 주요 DAG
 
