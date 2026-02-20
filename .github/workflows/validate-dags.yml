@@ -6,7 +6,6 @@ on:
       - 'dags/**'
       - 'src/**'
       - 'requirements.txt'
-      - 'setup.py'
       - 'pyproject.toml'
       - 'MANIFEST.in'
 
