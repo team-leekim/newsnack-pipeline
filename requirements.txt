@@ -1,19 +1,5 @@
-certifi==2026.1.4
-charset-normalizer==3.4.4
-feedparser==6.0.12
-idna==3.11
-joblib==1.5.3
-numpy==1.26.4
-psycopg2-binary==2.9.11
-python-dateutil==2.9.0.post0
-python-dotenv==1.2.1
-PyYAML==6.0.3
-requests==2.32.5
-scikit-learn==1.4.2
-scipy==1.11.4
-sgmllib3k==1.0.0
-six==1.17.0
-SQLAlchemy==1.4.48
-threadpoolctl==3.6.0
-typing_extensions==4.15.0
-urllib3==2.6.3
+# ─── Airflow Providers ────────────
+# slim 이미지에는 미포함되므로 명시적으로 설치
+# 새로운 Provider가 필요하면 이 섹션에 추가
+apache-airflow-providers-postgres
+apache-airflow-providers-http
