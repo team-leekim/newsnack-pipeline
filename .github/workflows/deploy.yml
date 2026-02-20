@@ -25,6 +25,7 @@ jobs:
     env:
       EC2_USERNAME: ec2-user
       TARGET_DIR: /home/ec2-user/newsnack-pipeline
+      REPOSITORY_URL: git@${{ github.event.repository.name }}:${{ github.repository }}.git
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -82,9 +83,16 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ env.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: CHANGED, TARGET_DIR
+          envs: CHANGED, TARGET_DIR, REPOSITORY_URL
           script: |
             set -e
+            
+            # 0. 리포지토리 복제 (필요 시)
+            if [ ! -d "$TARGET_DIR" ]; then
+              echo "🚀 Cloning repository..."
+              git clone $REPOSITORY_URL $TARGET_DIR
+            fi
+            
             cd $TARGET_DIR
             
             # 1. Pull latest code
