@@ -11,7 +11,7 @@ from airflow.exceptions import AirflowSkipException
 from datetime import datetime, timedelta
 import logging
 import time
-from newsnack_etl.database.models import IssueStatusEnum
+from newsnack_etl.common.enums import IssueStatusEnum
 
 logger = logging.getLogger(__name__)
 

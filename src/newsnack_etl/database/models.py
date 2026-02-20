@@ -1,4 +1,4 @@
-import enum
+from newsnack_etl.common.enums import IssueStatusEnum
 from sqlalchemy import Column, Integer, BigInteger, String, Text, DateTime, ForeignKey, Enum as SqlEnum
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
@@ -22,12 +22,6 @@ class RawArticle(Base):
     crawled_at = Column(DateTime(timezone=True), server_default=func.now())
     issue_id = Column(BigInteger, ForeignKey("issue.id"), nullable=True)
 
-class IssueStatusEnum(str, enum.Enum):
-    PENDING = "PENDING"
-    IN_PROGRESS = "IN_PROGRESS"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-    CANCELED = "CANCELED"
 
 class Issue(Base):
     __tablename__ = "issue"
