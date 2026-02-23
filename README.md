@@ -8,9 +8,9 @@ RSS 피드에서 뉴스를 수집하고, 유사 기사들을 군집화하여 이
 
 ```mermaid
 graph LR
-    A["RSS Sources<br/>(언론사)"] -->|수집| B["news_collection_dag<br/>(30분 주기)"]
+    A["RSS Sources<br/>(언론사)"] -->|수집| B["news_collection_dag<br/>(1시간 주기)"]
     B -->|저장| D[("PostgreSQL<br/>Database")]
-    D -->|조회| C["issue_clustering_dag<br/>(07:00, 17:00)"]
+    D -->|조회| C["issue_clustering_dag<br/>(07:10, 17:10)"]
     C -->|저장| D
     D -->|조회| E["content_generation_dag<br/>(07:30, 17:30)"]
     E -->|요청| F["newsnack-ai<br/>Server"]
@@ -135,9 +135,9 @@ pip install -e .
 
 | DAG | 스케줄 | 역할 |
 |-----|--------|------|
-| `news_collection_dag` | `*/30 * * * *` | RSS 피드에서 뉴스 수집 |
-| `issue_clustering_dag` | `0 8,22 * * *` | 유사 기사 군집화 |
-| `content_generation_dag` | `30 8,22 * * *` | AI 콘텐츠 생성 |
+| `news_collection_dag` | `0 * * * *` | RSS 피드에서 뉴스 수집 (매 1시간) |
+| `issue_clustering_dag` | `10 8,22 * * *` | 유사 기사 군집화 (07:10, 17:10 KST) |
+| `content_generation_dag` | `30 8,22 * * *` | AI 콘텐츠 생성 (07:30, 17:30 KST) |
 
 ## Import 경로
 

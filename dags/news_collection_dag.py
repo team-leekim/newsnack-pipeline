@@ -1,6 +1,6 @@
 """
 뉴스 수집 DAG
-매 30분마다 언론사 RSS를 크롤링하여 raw_article 테이블에 적재
+매 1시간마다 언론사 RSS를 크롤링하여 raw_article 테이블에 적재
 """
 from airflow import DAG
 from airflow.operators.python import PythonOperator
@@ -32,8 +32,8 @@ def run_rss_collector():
 with DAG(
     'news_collection_dag',
     default_args=default_args,
-    description='매 30분마다 언론사 RSS 수집',
-    schedule_interval='*/30 * * * *',  # 매 30분
+    description='매 1시간마다 언론사 RSS 수집',
+    schedule_interval='0 * * * *',  # 매 1시간
     start_date=datetime(2026, 2, 5),
     catchup=False,
     tags=['newsnack', 'collection', 'rss'],
